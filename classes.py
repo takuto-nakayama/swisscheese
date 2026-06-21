@@ -3,7 +3,7 @@ from transformers import AutoTokenizer, AutoModel
 from ripser import ripser
 from persim import plot_diagrams, wasserstein
 import numpy as np
-import csv, h5py, os, pickle, torch
+import csv, h5py, os, pickle, random, torch
 
 
 
@@ -12,7 +12,7 @@ data_dir = os.getenv('DATA_DIR')
 result_dir = os.getenv('RESULT_DIR')
 emb_dir = os.getenv('EMB_DIR')
 pd_dir = os.getenv('PD_DIR')
-ws_dir = os.getegid('WS_DIR')
+ws_dir = os.getenv('WS_DIR')
 
 
 
@@ -68,12 +68,15 @@ class PersistenceDiagram:
 		self.dataset = dataset
 
 	
-	def pers_hom(self, thresh:float, n_perm:int, save:bool, file_path:str):
+	def pers_hom(self, thresh:float, num_samples:int, save:bool, file_path:str):
 		with h5py.File(self.file_path, 'r') as f:
 			self.data = f[self.dataset]
-			self.filtration = ripser(self.data,
-									 thresh=thresh,
-							         n_perm=n_perm)
+			samples = random.sample(range(0,len(self.data)), num_samples)
+			sampled_embedding = [self.data[i] for i in samples]
+			sampled_embedding = np.vstack(sampled_embedding)
+
+			self.filtration = ripser(sampled_embedding,
+									 thresh=thresh)
 			self.dgms = self.filtration['dgms']
 
 			if save:

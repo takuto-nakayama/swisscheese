@@ -22,7 +22,7 @@ if __name__=='__main__':
 	parser.add_argument('-thresh',
 					    type=float,
 						default=1.0)
-	parser.add_argument('-n_perm',
+	parser.add_argument('-num_samples',
 					    type=int,
 						default=1000)
 	parser.add_argument('-save_pd',
@@ -38,7 +38,7 @@ if __name__=='__main__':
 	dataset_name =		args.dataset_name
 	cycle =				args.cycle
 	thresh =			args.thresh
-	n_perm =			args.n_perm
+	num_samples =		args.num_samples
 	save_pd =			args.save_pd
 	save_path_pd =		args.save_path_pd
 	save_ws =			args.save_ws
@@ -51,7 +51,7 @@ if __name__=='__main__':
 								dataset=dataset_name)
 		
 		pd.pers_hom(thresh=thresh,
-					n_perm=n_perm,
+					num_samples=num_samples,
 					save=save_pd,
 					file_path=f'{pd_dir}/{save_path_pd}-{i}')
 		
