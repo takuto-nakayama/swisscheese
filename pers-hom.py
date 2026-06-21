@@ -22,9 +22,12 @@ if __name__=='__main__':
 	parser.add_argument('-thresh',
 					    type=float,
 						default=1.0)
+	parser.add_argument('-metric',
+					    type=str,
+						default='cosine')
 	parser.add_argument('-num_samples',
 					    type=int,
-						default=1000)
+						default=10000)
 	parser.add_argument('-save_pd',
 					    action='store_true')
 	parser.add_argument('-save_path_pd',
@@ -38,6 +41,7 @@ if __name__=='__main__':
 	dataset_name =		args.dataset_name
 	cycle =				args.cycle
 	thresh =			args.thresh
+	metric =			args.metric
 	num_samples =		args.num_samples
 	save_pd =			args.save_pd
 	save_path_pd =		args.save_path_pd
@@ -51,6 +55,7 @@ if __name__=='__main__':
 								dataset=dataset_name)
 		
 		pd.pers_hom(thresh=thresh,
+			  		metric=metric,
 					num_samples=num_samples,
 					save=save_pd,
 					file_path=f'{pd_dir}/{save_path_pd}-{i}')

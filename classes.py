@@ -68,7 +68,7 @@ class PersistenceDiagram:
 		self.dataset = dataset
 
 	
-	def pers_hom(self, thresh:float, num_samples:int, save:bool, file_path:str):
+	def pers_hom(self, thresh:float, metric:str, num_samples:int, save:bool, file_path:str):
 		with h5py.File(self.file_path, 'r') as f:
 			self.data = f[self.dataset]
 			samples = random.sample(range(0,len(self.data)), num_samples)
@@ -76,16 +76,18 @@ class PersistenceDiagram:
 			sampled_embedding = np.vstack(sampled_embedding)
 
 			self.filtration = ripser(sampled_embedding,
-									 thresh=thresh)
+									 thresh=thresh,
+									 metric=metric)
 			self.dgms = self.filtration['dgms']
 
 			if save:
 				record = {
-					'dgms':		self.dgms,
-					'n_points':	len(self.data)
+					'dgms':			self.dgms,
+					'n_points':		len(self.data),
+					'num_samples':	num_samples
 				}
 
-				with open(f'{result_dir}/{file_path}.pkl', 'a') as f:
+				with open(f'{file_path}.pkl', 'wb') as f:
 					pickle.dump(record, f)
 
 
@@ -118,10 +120,10 @@ class Distance:
 			d_h0.append(d_i_h0)
 			d_h1.append(d_i_h1)
 		
-		with open(f'{result_dir}/{self.file_path}-h0.csv', 'w') as f:
+		with open(f'{self.file_path}-h0.csv', 'w') as f:
 			writer = csv.writer(f)
 			writer.writerows()
 
-		with open(f'{result_dir}/{self.file_path}-h1.csv', 'w') as f:
+		with open(f'{self.file_path}-h1.csv', 'w') as f:
 			writer = csv.writer(f)
 			writer.writerows()
