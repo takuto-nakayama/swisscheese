@@ -11,14 +11,18 @@ if __name__=='__main__':
 
 
 	#  parse the arguments
+	parser.add_argument('pd_path',
+					    type=str)
 	parser.add_argument('save_path_pd',
-					    type=str,)
+					    type=str)
 
 	args = parser.parse_args()
-	save_path_pd =	args.save_path_pd
+	pd_path			= args.pd_path
+	save_path_pd	= args.save_path_pd
 
 
 	#  main process
 	## gain the wasserstein distance
-	distance = Distance(pds_path=pd_dir,
+	distance = Distance(pd_path=f'{pd_dir}/{pd_path}',
 					    file_path=f'{ws_dir}/{save_path_pd}')
+	distance.wasserstein()

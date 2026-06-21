@@ -93,37 +93,40 @@ class PersistenceDiagram:
 
 
 class Distance:
-	def __init__(self, pds_path:list, file_path:str):
-		self.list_pds = os.listdir(f'{pd_dir}/{pds_path}')
+	def __init__(self, pd_path:str, file_path:str):
+		self.pd_path = pd_path
+		self.list_pds = os.listdir(pd_path)
 		self.file_path = file_path
 
 
 	def wasserstein(self):
-		d_h0 = []
-		d_h1 = []
+		d_h0 = [self.list_pds]
+		d_h1 = [self.list_pds]
 
 		for i in self.list_pds:
-			d_i_h0 = []
-			d_i_h1 = []
-			with open(f'{pd_dir}/{i}', 'rb') as f:
+			d_i_h0 = [i]
+			d_i_h1 = [i]
+			with open(f'{self.pd_path}/{i}', 'rb') as f:
 				dgms_i = pickle.load(f)
 			for j in self.list_pds:
 				if i == j:
 					d_i_h0.append(0)
 					d_i_h1.append(0)
 				else:
-					with open(f'{pd_dir}/{j}', 'rb') as f:
+					with open(f'{self.pd_path}/{j}', 'rb') as f:
 						dgms_j = pickle.load(f)
-					d_i_h0.append(wasserstein(dgms_i[0], dgms_j[0]))
-					d_i_h1.append(wasserstein(dgms_i[1], dgms_j[1]))
+					d_i_h0.append(wasserstein(dgms_i['dgms'][0], dgms_j['dgms'][0]))
+					d_i_h1.append(wasserstein(dgms_i['dgms'][1], dgms_j['dgms'][1]))
 
 			d_h0.append(d_i_h0)
 			d_h1.append(d_i_h1)
 		
 		with open(f'{self.file_path}-h0.csv', 'w') as f:
 			writer = csv.writer(f)
-			writer.writerows()
+			d_h0[0].insert(0, '')
+			writer.writerows(d_h0)
 
 		with open(f'{self.file_path}-h1.csv', 'w') as f:
 			writer = csv.writer(f)
-			writer.writerows()
+			d_h1[0].insert(0, '')
+			writer.writerows(d_h1)
