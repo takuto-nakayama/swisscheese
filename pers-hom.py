@@ -33,8 +33,6 @@ if __name__=='__main__':
 	parser.add_argument('-save_path_pd',
 					    type=str,
 						default='perhom')
-	parser.add_argument('-save_ws',
-						action='store_true')
 
 	args = parser.parse_args()
 	path_embedding =	args.path_embedding
@@ -45,7 +43,6 @@ if __name__=='__main__':
 	num_samples =		args.num_samples
 	save_pd =			args.save_pd
 	save_path_pd =		args.save_path_pd
-	save_ws =			args.save_ws
 
 
 	#  main process
