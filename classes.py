@@ -1,65 +1,124 @@
+from dotenv import load_dotenv
 from transformers import AutoTokenizer, AutoModel
 from ripser import ripser
-from persim import plot_diagrams
+from persim import plot_diagrams, wasserstein
 import numpy as np
-import h5py, os, torch
+import csv, h5py, os, pickle, torch
 
 
 
 load_dotenv()
 data_dir = os.getenv('DATA_DIR')
-save_dir = os.getenv('SAVE_DIR')
+result_dir = os.getenv('RESULT_DIR')
+emb_dir = os.getenv('EMB_DIR')
+pd_dir = os.getenv('PD_DIR')
+ws_dir = os.getegid('WS_DIR')
 
 
 
 class Embedding:
-	def __init__(self, model_name):
+	def __init__(self, model_name:str):
 		self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 		self.model = AutoModel.from_pretrained(model_name).to(self.device)
 		self.model.eval()
 		self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 
-	def embed(self, file_path):
+	def embed(self, file_path:str, batch:int):
 		with open(f'{file_path}.txt') as f:
 			text = f.readlines()
 			text = [t.strip() for t in text]
+		cycle = len(text) // batch
+		additional = len(text) % batch
+		start = 0
+		self.embeddings = []
 
-		inputs = self.tokenizer(text,
-								return_tensors='pt',
-								truncation=True,
-								padding=True,
-								max_length=512)
-		inputs = {k: v.to(self.device) for k, v in inputs.items()}
-		
-		with torch.no_grad():
-			outputs = self.model(**inputs)
-		hidden = outputs.last_hidden_state
-		mask = inputs['attention_mask'].bool()
-		self.embeddings = hidden[mask].cpu().numpy()
+		for c in range(1, cycle+1):
+			text_batched  =text[start:batch*c]
+			inputs = self.tokenizer(text_batched,
+									return_tensors='pt',
+									truncation=True,
+									padding=True,
+									max_length=512)
+			inputs = {k: v.to(self.device) for k, v in inputs.items()}
+			
+			with torch.no_grad():
+				outputs = self.model(**inputs)
+			hidden = outputs.last_hidden_state
+			mask = inputs['attention_mask'].bool()
+			self.embeddings.append(hidden[mask].cpu().numpy())
+			start += batch
+
+		self.embeddings = np.vstack(self.embeddings)
 
 
-	def save(self, file_path, group, dataset):
+	def save(self, file_path:str, dataset:str):
 		with h5py.File(f'{file_path}.h5', 'a') as f:
-			f.create_dataset(f'{group}/{dataset}', data=self.embeddings)
+			f.create_dataset(dataset, data=self.embeddings)
 		print(
-			f'''{group}/{dataset} in {file_path}.h5
+			f'''{dataset} in {file_path}.h5
 				{len(self.embeddings)} embeddings saved.
 			''')
 
 
 
 class PersistenceDiagram:
-	def __init__(self, data):
-		self.filtration = ripser(data)
-		self.dgms = self.filtration['dgms']
+	def __init__(self, file_path:str, dataset:str):
+		self.file_path = file_path + '.h5'
+		self.dataset = dataset
 
-	def save(self, file_path):
-		
+	
+	def pers_hom(self, thresh:float, n_perm:int, save:bool, file_path:str):
+		with h5py.File(self.file_path, 'r') as f:
+			self.data = f[self.dataset]
+			self.filtration = ripser(self.data,
+									 thresh=thresh,
+							         n_perm=n_perm)
+			self.dgms = self.filtration['dgms']
+
+			if save:
+				record = {
+					'dgms':		self.dgms,
+					'n_points':	len(self.data)
+				}
+
+				with open(f'{result_dir}/{file_path}.pkl', 'a') as f:
+					pickle.dump(record, f)
+
+
+
+class Distance:
+	def __init__(self, pds_path:list, file_path:str):
+		self.list_pds = os.listdir(f'{pd_dir}/{pds_path}')
+		self.file_path = file_path
+
 
 	def wasserstein(self):
-		pass
+		d_h0 = []
+		d_h1 = []
 
+		for i in self.list_pds:
+			d_i_h0 = []
+			d_i_h1 = []
+			with open(f'{pd_dir}/{i}', 'rb') as f:
+				dgms_i = pickle.load(f)
+			for j in self.list_pds:
+				if i == j:
+					d_i_h0.append(0)
+					d_i_h1.append(0)
+				else:
+					with open(f'{pd_dir}/{j}', 'rb') as f:
+						dgms_j = pickle.load(f)
+					d_i_h0.append(wasserstein(dgms_i[0], dgms_j[0]))
+					d_i_h1.append(wasserstein(dgms_i[1], dgms_j[1]))
 
-	def bottleneck(self, save=False):
-		pass
+			d_h0.append(d_i_h0)
+			d_h1.append(d_i_h1)
+		
+		with open(f'{result_dir}/{self.file_path}-h0.csv', 'w') as f:
+			writer = csv.writer(f)
+			writer.writerows()
+
+		with open(f'{result_dir}/{self.file_path}-h1.csv', 'w') as f:
+			writer = csv.writer(f)
+			writer.writerows()
