@@ -17,11 +17,12 @@ ws_dir = os.getenv('WS_DIR')
 
 
 class Embedding:
-	def __init__(self, model_name:str):
+	def __init__(self, model_name:str, lang:None|str):
 		self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 		self.model = AutoModel.from_pretrained(model_name).to(self.device)
 		self.model.eval()
 		self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+		self.lang = lang 
 
 
 	def embed(self, file_path:str, batch:int):
@@ -29,12 +30,14 @@ class Embedding:
 			text = f.readlines()
 			text = [t.strip() for t in text]
 		cycle = len(text) // batch
-		additional = len(text) % batch
 		start = 0
 		self.embeddings = []
 
-		for c in range(1, cycle+1):
-			text_batched  =text[start:batch*c]
+		for c in range(1, cycle+2):
+			if c <= cycle:
+				text_batched  = text[start:batch*c]
+			else:
+				text_batched = text[start:]
 			inputs = self.tokenizer(text_batched,
 									return_tensors='pt',
 									truncation=True,
@@ -42,8 +45,17 @@ class Embedding:
 									max_length=512)
 			inputs = {k: v.to(self.device) for k, v in inputs.items()}
 			
-			with torch.no_grad():
-				outputs = self.model(**inputs)
+			if self.lang:
+				lang_id = self.tokenizer.lang2id[self.lang]
+				langs = torch.full_like(inputs['input_ids'],
+										lang_id)
+				with torch.no_grad():
+					outputs = self.model(input_ids=inputs['input_ids'],
+						  				 langs=langs)
+			else:
+				with torch.no_grad():
+					outputs = self.model(**inputs)
+		
 			hidden = outputs.last_hidden_state
 			mask = inputs['attention_mask'].bool()
 			self.embeddings.append(hidden[mask].cpu().numpy())
@@ -51,7 +63,7 @@ class Embedding:
 
 		self.embeddings = np.vstack(self.embeddings)
 
-
+	
 	def save(self, file_path:str, dataset:str):
 		with h5py.File(f'{file_path}.h5', 'a') as f:
 			f.create_dataset(dataset, data=self.embeddings)
