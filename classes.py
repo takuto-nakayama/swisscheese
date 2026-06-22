@@ -98,6 +98,7 @@ class Distance:
         self.list_pds = sorted(os.listdir(pd_path))
         self.file_path = file_path
 
+
     def get_wasserstein(self):
         names = self.list_pds
         n = len(names)
@@ -108,12 +109,8 @@ class Distance:
 
         def finite(dgm):
             return dgm[np.isfinite(dgm[:, 1])]
-        def prune(dgm, eps=0.05):
-            pers = dgm[:, 1] - dgm[:, 0]
-            return dgm[pers > eps]
-
         dgms_all = {
-            k: [prune(finite(v[0])), prune(finite(v[1]))]
+            k: [finite(v[0]), finite(v[1])]
             for k, v in dgms_all.items()
         }
 
@@ -132,6 +129,7 @@ class Distance:
 
         self._save_csv(D_h0, f'{self.file_path}-h0.csv', names)
         self._save_csv(D_h1, f'{self.file_path}-h1.csv', names)
+
 
     def _save_csv(self, D, path, names):
         with open(path, 'w', newline='') as f:
