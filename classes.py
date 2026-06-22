@@ -71,9 +71,9 @@ class PersistenceDiagram:
 	def pers_hom(self, thresh:float, metric:str, num_samples:int, save:bool, file_path:str):
 		with h5py.File(self.file_path, 'r') as f:
 			self.data = f[self.dataset]
-			samples = random.sample(range(0,len(self.data)), num_samples)
-			sampled_embedding = [self.data[i] for i in samples]
-			sampled_embedding = np.vstack(sampled_embedding)
+			n = len(self.data)
+			samples = sorted(random.sample(range(n), num_samples))
+			sampled_embedding = self.data[samples]
 
 			self.filtration = ripser(sampled_embedding,
 									 thresh=thresh,
@@ -93,40 +93,49 @@ class PersistenceDiagram:
 
 
 class Distance:
-	def __init__(self, pd_path:str, file_path:str):
-		self.pd_path = pd_path
-		self.list_pds = os.listdir(pd_path)
-		self.file_path = file_path
+    def __init__(self, pd_path: str, file_path: str):
+        self.pd_path = pd_path
+        self.list_pds = sorted(os.listdir(pd_path))
+        self.file_path = file_path
 
+    def get_wasserstein(self):
+        names = self.list_pds
+        n = len(names)
+        dgms_all = {}
+        for pd in names:
+            with open(f'{self.pd_path}/{pd}', 'rb') as f:
+                dgms_all[pd] = pickle.load(f)['dgms']
 
-	def wasserstein(self):
-		d_h0 = [self.list_pds]
-		d_h1 = [self.list_pds]
+        def finite(dgm):
+            return dgm[np.isfinite(dgm[:, 1])]
+        def prune(dgm, eps=0.05):
+            pers = dgm[:, 1] - dgm[:, 0]
+            return dgm[pers > eps]
 
-		for i in self.list_pds:
-			d_i_h0 = [i]
-			d_i_h1 = [i]
-			with open(f'{self.pd_path}/{i}', 'rb') as f:
-				dgms_i = pickle.load(f)
-			for j in self.list_pds:
-				if i == j:
-					d_i_h0.append(0)
-					d_i_h1.append(0)
-				else:
-					with open(f'{self.pd_path}/{j}', 'rb') as f:
-						dgms_j = pickle.load(f)
-					d_i_h0.append(wasserstein(dgms_i['dgms'][0], dgms_j['dgms'][0]))
-					d_i_h1.append(wasserstein(dgms_i['dgms'][1], dgms_j['dgms'][1]))
+        dgms_all = {
+            k: [prune(finite(v[0])), prune(finite(v[1]))]
+            for k, v in dgms_all.items()
+        }
 
-			d_h0.append(d_i_h0)
-			d_h1.append(d_i_h1)
-		
-		with open(f'{self.file_path}-h0.csv', 'w') as f:
-			writer = csv.writer(f)
-			d_h0[0].insert(0, '')
-			writer.writerows(d_h0)
+        D_h0 = np.zeros((n, n))
+        D_h1 = np.zeros((n, n))
 
-		with open(f'{self.file_path}-h1.csv', 'w') as f:
-			writer = csv.writer(f)
-			d_h1[0].insert(0, '')
-			writer.writerows(d_h1)
+        for i in range(n):
+            dgms_i = dgms_all[names[i]]
+            for j in range(i + 1, n):
+                dgms_j = dgms_all[names[j]]
+                d0 = wasserstein(dgms_i[0], dgms_j[0])
+                d1 = wasserstein(dgms_i[1], dgms_j[1])
+                D_h0[i, j] = D_h0[j, i] = d0
+                D_h1[i, j] = D_h1[j, i] = d1
+            print(f'{names[i]} is done.')
+
+        self._save_csv(D_h0, f'{self.file_path}-h0.csv', names)
+        self._save_csv(D_h1, f'{self.file_path}-h1.csv', names)
+
+    def _save_csv(self, D, path, names):
+        with open(path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([''] + list(names))
+            for name, row in zip(names, D):
+                writer.writerow([name] + list(row))

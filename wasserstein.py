@@ -1,6 +1,7 @@
 from classes import Distance
 from dotenv import load_dotenv
 import argparse, os
+import warnings
 
 if __name__=='__main__':
 	#  load the environment variables
@@ -8,6 +9,7 @@ if __name__=='__main__':
 	pd_dir = os.getenv('PD_DIR')
 	ws_dir = os.getenv('WS_DIR')
 	parser = argparse.ArgumentParser()
+	warnings.filterwarnings('ignore', message='dgm1 has points with non-finite death times')
 
 
 	#  parse the arguments
@@ -25,4 +27,4 @@ if __name__=='__main__':
 	## gain the wasserstein distance
 	distance = Distance(pd_path=f'{pd_dir}/{pd_path}',
 					    file_path=f'{ws_dir}/{save_path_pd}')
-	distance.wasserstein()
+	distance.get_wasserstein()

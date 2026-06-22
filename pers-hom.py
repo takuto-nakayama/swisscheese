@@ -27,7 +27,7 @@ if __name__=='__main__':
 						default='cosine')
 	parser.add_argument('-num_samples',
 					    type=int,
-						default=10000)
+						default=2000)
 	parser.add_argument('-save_pd',
 					    action='store_true')
 	parser.add_argument('-save_path_pd',
@@ -56,4 +56,6 @@ if __name__=='__main__':
 					num_samples=num_samples,
 					save=save_pd,
 					file_path=f'{pd_dir}/{save_path_pd}-{i}')
+		
+		print(f'{dataset_name}, {i}: done.')
 		
