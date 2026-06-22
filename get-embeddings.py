@@ -20,6 +20,9 @@ if __name__=='__main__':
 	parser.add_argument('-lang',
 					    type=str,
 						default=None)
+	parser.add_argument('tokenizer_name',
+					    type=str,
+						default='bert-base-multilingual-uncased')
 	parser.add_argument('-save_emb',
 					    action='store_true')
 	parser.add_argument('-save_path_emb',
@@ -31,21 +34,28 @@ if __name__=='__main__':
 	
 
 	args = parser.parse_args()
-	model_name =	args.model_name
-	batch =			args.batch
-	lang =			args.lang
-	path_data =		args.path_data
-	save_emb =		args.save_emb
-	save_path_emb =	args.save_path_emb
-	dataset_name =	args.dataset_name
+	model_name =		args.model_name
+	batch =				args.batch
+	lang =				args.lang
+	tokenizer_name =	args.tokenizer_name
+	path_data =			args.path_data
+	save_emb =			args.save_emb
+	save_path_emb =		args.save_path_emb
+	dataset_name =		args.dataset_name
 
 
 	#  main process
 	## gain the embeddings from the input data
 	embedding = Embedding(model_name=model_name,
 					      lang=lang)
-	embedding.embed(file_path=f'{data_dir}/{path_data}',
-				    batch=batch)
+	
+	if model_name == 'fasttext':
+		embedding.embed_fasttext(f'{data_dir}/{path_data}',
+						   		 tokenizer_name=tokenizer_name)
+	else:
+		embedding.embed_dynamic(file_path=f'{data_dir}/{path_data}',
+						    	batch=batch)
+	
 	if save_emb:
 		embedding.save(file_path=f'{result_dir}/{save_path_emb}',
 					   dataset=dataset_name)

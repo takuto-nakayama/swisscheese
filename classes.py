@@ -3,7 +3,7 @@ from transformers import AutoTokenizer, AutoModel
 from ripser import ripser
 from persim import plot_diagrams, wasserstein
 import numpy as np
-import csv, h5py, os, pickle, random, torch
+import csv, fasttext, fasttext.util, h5py, os, pickle, random, torch
 
 
 
@@ -18,14 +18,31 @@ ws_dir = os.getenv('WS_DIR')
 
 class Embedding:
 	def __init__(self, model_name:str, lang:None|str):
-		self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-		self.model = AutoModel.from_pretrained(model_name).to(self.device)
-		self.model.eval()
-		self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+		self.model_name = model_name
 		self.lang = lang 
 
+	def embed_fasttext(self, file_path:str, tokenizer_name):
+		fasttext.util.download_model(self.lang, if_exists='ignore')
+		self.model = fasttext.load_model(f'cc.{self.lang}.300.bin')
+		self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+		with open(f'{file_path}.txt') as f:
+			text = f.readlines()
+		tokenized = [w for snt in text for w in self.tokenizer.tokenize(snt)]
+		tokenized_sorted = sorted(set(tokenized))
+		self.embeddings = []
 
-	def embed(self, file_path:str, batch:int):
+		for t in tokenized_sorted:
+			vec = self.model.get_word_vector(t)
+			self.embeddings.append(vec)
+		
+		self.embeddings = np.vstack(self.embeddings)
+
+
+	def embed_dynamic(self, file_path:str, batch:int):
+		self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+		self.model = AutoModel.from_pretrained(self.model_name).to(self.device)
+		self.model.eval()
+		self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 		with open(f'{file_path}.txt') as f:
 			text = f.readlines()
 			text = [t.strip() for t in text]
