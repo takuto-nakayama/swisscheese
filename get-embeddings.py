@@ -18,7 +18,7 @@ if __name__=='__main__':
 					    type=int,
 						default=500)
 	parser.add_argument('-lang',
-					    type=None|str,
+					    type=str,
 						default=None)
 	parser.add_argument('-save_emb',
 					    action='store_true')
