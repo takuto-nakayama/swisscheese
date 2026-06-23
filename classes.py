@@ -53,14 +53,18 @@ class Embedding:
 		for c in range(1, cycle+2):
 			if c <= cycle:
 				text_batched  = text[start:batch*c]
-			else:
+			elif len(text) % batch != 0:
 				text_batched = text[start:]
+			else:
+				break
 			inputs = self.tokenizer(text_batched,
 									return_tensors='pt',
 									truncation=True,
 									padding=True,
-									max_length=512)
+									max_length=512,
+									return_special_tokens_mask=True)
 			inputs = {k: v.to(self.device) for k, v in inputs.items()}
+			special_mask = inputs.pop('special_tokens_mask').bool()
 			
 			if self.lang:
 				lang_id = self.tokenizer.lang2id[self.lang]
@@ -74,8 +78,10 @@ class Embedding:
 					outputs = self.model(**inputs)
 		
 			hidden = outputs.last_hidden_state
-			mask = inputs['attention_mask'].bool()
-			self.embeddings.append(hidden[mask].cpu().numpy())
+			attention_mask = inputs['attention_mask'].bool()
+			keep = attention_mask & (~special_mask)
+			self.embeddings.append(hidden[keep].cpu().numpy())
+			
 			start += batch
 
 		self.embeddings = np.vstack(self.embeddings)

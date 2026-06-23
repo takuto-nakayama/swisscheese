@@ -20,7 +20,7 @@ if __name__=='__main__':
 	parser.add_argument('-lang',
 					    type=str,
 						default=None)
-	parser.add_argument('tokenizer_name',
+	parser.add_argument('-tokenizer_name',
 					    type=str,
 						default='bert-base-multilingual-uncased')
 	parser.add_argument('-save_emb',
