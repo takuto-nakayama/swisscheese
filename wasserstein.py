@@ -28,3 +28,5 @@ if __name__=='__main__':
 	distance = Distance(pd_path=f'{pd_dir}/{pd_path}',
 					    file_path=f'{ws_dir}/{save_path_pd}')
 	distance.get_wasserstein()
+	distance.clustering()
+	distance.msd_2d()

@@ -2,7 +2,11 @@ from datasets import load_dataset
 from dotenv import load_dotenv
 from persim import plot_diagrams, wasserstein
 from ripser import ripser
+from scipy.cluster.hierarchy import linkage, dendrogram
+from scipy.spatial.distance import squareform
+from sklearn.manifold import MDS
 from transformers import AutoTokenizer, AutoModel
+import matplotlib.pyplot as plt
 import numpy as np
 import csv, fasttext, fasttext.util, h5py, os, pickle, random, torch
 
@@ -213,6 +217,8 @@ class Distance:
         self.pd_path = pd_path
         self.list_pds = sorted(os.listdir(pd_path))
         self.file_path = file_path
+        self.D_h0 = np.zeros((len(self.list_pds), len(self.list_pds)))
+        self.D_h1 = np.zeros((len(self.list_pds), len(self.list_pds)))
 
 
     def get_wasserstein(self):
@@ -230,21 +236,18 @@ class Distance:
             for k, v in dgms_all.items()
         }
 
-        D_h0 = np.zeros((n, n))
-        D_h1 = np.zeros((n, n))
-
         for i in range(n):
             dgms_i = dgms_all[names[i]]
             for j in range(i + 1, n):
                 dgms_j = dgms_all[names[j]]
                 d0 = wasserstein(dgms_i[0], dgms_j[0])
                 d1 = wasserstein(dgms_i[1], dgms_j[1])
-                D_h0[i, j] = D_h0[j, i] = d0
-                D_h1[i, j] = D_h1[j, i] = d1
+                self.D_h0[i, j] =self. D_h0[j, i] = d0
+                self.D_h1[i, j] = self.D_h1[j, i] = d1
             print(f'{names[i]} is done.')
 
-        self._save_csv(D_h0, f'{self.file_path}-h0.csv', names)
-        self._save_csv(D_h1, f'{self.file_path}-h1.csv', names)
+        self._save_csv(self.D_h0, f'{self.file_path}-h0.csv', names)
+        self._save_csv(self.D_h1, f'{self.file_path}-h1.csv', names)
 
 
     def _save_csv(self, D, path, names):
@@ -253,3 +256,62 @@ class Distance:
             writer.writerow([''] + list(names))
             for name, row in zip(names, D):
                 writer.writerow([name] + list(row))
+
+
+    def clustering(self):
+		condensed_D_h0 = squareform(self.D_h0)
+		condensed_D_h1 = squareform(self.D_h1)
+		Z_h0 = linkage(condensed_D_h0, method='complete')
+		Z_h1 = linkage(condensed_D_h1, method='complete')
+
+		plt.figure(figsize=(6, 4))
+		dendrogram(Z_h0, labels=self.lsit_pds)
+		plt.ylabel('Distance')
+		plt.savefig(f'{self.file_path}-dendrogram-h0.png')
+
+		plt.figure(figsize=(6, 4))
+		dendrogram(Z_h1, labels=self.lsit_pds)
+		plt.ylabel('Distance')
+		plt.savefig(f'{self.file_path}-dendrogram-h1.png')
+
+
+	def msd_2d(self):
+		mds = MDS(n_components=2, dissimilarity="precomputed", random_state=42)
+		coords_h0 = mds.fit_transform(self.D_h0)
+		coords_h1 = mds.fit_transform(self.D_h1)
+
+		plt.figure(figsize=(6, 5))
+		plt.scatter(coords_h0[:, 0],
+			        coords_h0[:, 1],
+					c=self.list_pds,
+					cmap="Set1",
+					s=200,
+					edgecolors="k")
+		for i, txt in enumerate(self.list_pds):
+			plt.annotate(txt,
+						 (coords_h0[i, 0], coords_h0[i, 1]),
+						 textcoords="offset points",
+						 xytext=(0, 10),
+						 ha="center",
+						 fontsize=12,
+						 weight="bold")
+		plt.grid(True, linestyle="--", alpha=0.6)
+		plt.savefig(f'{self.file_path}-mds-h0.png')
+
+		plt.figure(figsize=(6, 5))
+		plt.scatter(coords_h1[:, 0],
+			        coords_h1[:, 1],
+					c=self.list_pds,
+					cmap="Set1",
+					s=200,
+					edgecolors="k")
+		for i, txt in enumerate(self.list_pds):
+			plt.annotate(txt,
+						 (coords_h1[i, 0], coords_h1[i, 1]),
+						 textcoords="offset points",
+						 xytext=(0, 10),
+						 ha="center",
+						 fontsize=12,
+						 weight="bold")
+		plt.grid(True, linestyle="--", alpha=0.6)
+		plt.savefig(f'{self.file_path}-mds-h1.png')
