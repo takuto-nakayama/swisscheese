@@ -1,7 +1,8 @@
+from datasets import load_dataset
 from dotenv import load_dotenv
-from transformers import AutoTokenizer, AutoModel
-from ripser import ripser
 from persim import plot_diagrams, wasserstein
+from ripser import ripser
+from transformers import AutoTokenizer, AutoModel
 import numpy as np
 import csv, fasttext, fasttext.util, h5py, os, pickle, random, torch
 
@@ -86,7 +87,87 @@ class Embedding:
 
 		self.embeddings = np.vstack(self.embeddings)
 
+
+	def embed_fasttext_wiki(self, config:str, tokenizer_name:str):
+		dataset = load_dataset('wikimedia/wikipedia',
+							   config,
+							   split='train')
+		indices = random.sample(range(len(dataset)),
+						  		k=5000)
+		sampled = dataset.select(indices)
+		sentences = []
+		self.embeddings = []
+		self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+		fasttext.util.download_model(self.lang, if_exists='ignore')
+		self.model = fasttext.load_model(f'cc.{self.lang}.300.bin')
+
+		for article in sampled:
+			paragraphs = article['text'].split('\n')
+			for para in paragraphs:
+				if para.strip():
+					sentences.append(para.strip())
+
+		tokenized = [w for snt in sentences for w in self.tokenizer.tokenize(snt)]
+		tokenized_sorted = sorted(set(tokenized))
+		for t in tokenized_sorted:
+			vec = self.model.get_word_vector(t)
+			self.embeddings.append(vec)
+
+		self.embeddings = np.vstack(self.embeddings)
+
+
+	def embed_dynamic_wiki(self, config:str, batch:int):
+		dataset = load_dataset('wikimedia/wikipedia',
+							   config,
+							   split='train')
+		indices = random.sample(range(len(dataset)),
+						        k=5000)
+		sampled = dataset.select(indices)
+		sentences = []
+		self.embeddings = []
+
+		for article in sampled:
+			paragraphs = article['text'].split('\n')
+			for para in paragraphs:
+				if para.strip():
+					sentences.append(para.strip())
+
+		self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+		self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+		self.model = AutoModel.from_pretrained(self.model_name).to(self.device)
+		self.model.eval()
+
+		cycles = len(sentences) // batch
+		start = 0
+		for c in range(1, cycles+2):
+			if c <= cycles:
+				sentences_batched = sentences[start:batch*c]
+			elif len(sentences) % batch != 0:
+				sentences_batched = sentences[start:]
+			else:
+				break
+			inputs = self.tokenizer(sentences_batched,
+									return_tensors='pt',
+									truncation=True,
+									padding=True,
+									max_length=512,
+									return_special_tokens_mask=True)
+			inputs = {k: v.to(self.device) for k, v in inputs.items()}
+			special_mask = inputs.pop('special_tokens_mask').bool()
+
+			with torch.no_grad():
+				outputs = self.model(**inputs)
+
+			hidden = outputs.last_hidden_state
+			attention_mask = inputs['attention_mask'].bool()
+			keep = attention_mask & (~special_mask)
+
+			self.embeddings.append(hidden[keep].cpu().numpy())
+			start += batch
+
+		self.embeddings = np.vstack(self.embeddings)
 	
+
 	def save(self, file_path:str, dataset:str):
 		with h5py.File(f'{file_path}.h5', 'a') as f:
 			f.create_dataset(dataset, data=self.embeddings)

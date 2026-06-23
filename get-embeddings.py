@@ -1,4 +1,4 @@
-from classes import Embedding, PersistenceDiagram
+from classes import Embedding
 from dotenv import load_dotenv
 import argparse, os
 
@@ -16,7 +16,7 @@ if __name__=='__main__':
 						default='bert-base-multilingual-uncased')
 	parser.add_argument('-batch',
 					    type=int,
-						default=500)
+						default=200)
 	parser.add_argument('-lang',
 					    type=str,
 						default=None)
@@ -31,6 +31,8 @@ if __name__=='__main__':
 	parser.add_argument('-dataset_name',
 					    type=str,
 						default='dataset')
+	parser.add_argument('-wiki',
+					    action='store_false')
 	
 
 	args = parser.parse_args()
@@ -42,6 +44,7 @@ if __name__=='__main__':
 	off_save_emb =			args.off_save_emb
 	save_path_emb =		args.save_path_emb
 	dataset_name =		args.dataset_name
+	wiki =				args.wiki
 
 
 	#  main process
@@ -49,12 +52,20 @@ if __name__=='__main__':
 	embedding = Embedding(model_name=model_name,
 					      lang=lang)
 	
-	if model_name == 'fasttext':
-		embedding.embed_fasttext(f'{data_dir}/{path_data}',
-						   		 tokenizer_name=tokenizer_name)
+	if wiki:
+		if model_name == 'fasttext':
+			embedding.embed_fasttext(f'{data_dir}/{path_data}',
+									tokenizer_name=tokenizer_name)
+		else:
+			embedding.embed_dynamic(file_path=f'{data_dir}/{path_data}',
+									batch=batch)
 	else:
-		embedding.embed_dynamic(file_path=f'{data_dir}/{path_data}',
-						    	batch=batch)
+		if model_name == 'fasttext':
+			embedding.embed_fasttext_wiki(config=path_data,
+										  tokenizer_name=tokenizer_name)
+		else:
+			embedding.embed_dynamic_wiki(config=path_data,
+										 batch=batch)
 	
 	if off_save_emb:
 		embedding.save(file_path=f'{result_dir}/{save_path_emb}',
