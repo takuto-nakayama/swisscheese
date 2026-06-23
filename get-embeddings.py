@@ -34,11 +34,11 @@ if __name__=='__main__':
 	
 
 	args = parser.parse_args()
+	path_data =			args.path_data
 	model_name =		args.model_name
 	batch =				args.batch
 	lang =				args.lang
 	tokenizer_name =	args.tokenizer_name
-	path_data =			args.path_data
 	save_emb =			args.save_emb
 	save_path_emb =		args.save_path_emb
 	dataset_name =		args.dataset_name
