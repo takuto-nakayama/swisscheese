@@ -27,9 +27,9 @@ if __name__=='__main__':
 						default='cosine')
 	parser.add_argument('-num_samples',
 					    type=int,
-						default=2000)
+						default=1000)
 	parser.add_argument('-save_pd',
-					    action='store_true')
+					    action='store_false')
 	parser.add_argument('-save_path_pd',
 					    type=str,
 						default='perhom')
