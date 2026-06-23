@@ -23,8 +23,8 @@ if __name__=='__main__':
 	parser.add_argument('-tokenizer_name',
 					    type=str,
 						default='bert-base-multilingual-uncased')
-	parser.add_argument('-save_emb',
-					    action='store_true')
+	parser.add_argument('-off_save_emb',
+					    action='store_false')
 	parser.add_argument('-save_path_emb',
 					 	type=str,
 						default='embedding')
@@ -39,7 +39,7 @@ if __name__=='__main__':
 	batch =				args.batch
 	lang =				args.lang
 	tokenizer_name =	args.tokenizer_name
-	save_emb =			args.save_emb
+	off_save_emb =			args.off_save_emb
 	save_path_emb =		args.save_path_emb
 	dataset_name =		args.dataset_name
 
@@ -56,6 +56,6 @@ if __name__=='__main__':
 		embedding.embed_dynamic(file_path=f'{data_dir}/{path_data}',
 						    	batch=batch)
 	
-	if save_emb:
+	if off_save_emb:
 		embedding.save(file_path=f'{result_dir}/{save_path_emb}',
 					   dataset=dataset_name)
