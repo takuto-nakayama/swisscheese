@@ -249,9 +249,9 @@ class Distance:
                 self.D_h0[i, j] =self. D_h0[j, i] = d0
                 self.D_h1[i, j] = self.D_h1[j, i] = d1
                 elapsed_j = time.time()-start_j
-                print(f'({names[i]}, {names[j]}): {elapsed_j:.2f}   seconds.')
+                print(f'({names[i][:-6]}, {names[j][:-6]}):   {elapsed_j:.2f}   seconds.')
             elapsed_i = time.time()-start_i
-            print(f'{names[i]} is done. ({elapsed_i:.2f}    seconds.)')
+            print(f'{names[i][:-6]} is done. ({elapsed_i:.2f}    seconds.)')
 
         self._save_csv(self.D_h0, f'{self.file_path}-h0.csv', names)
         self._save_csv(self.D_h1, f'{self.file_path}-h1.csv', names)
