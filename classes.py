@@ -26,7 +26,7 @@ class Embedding:
         self.model_name = model_name
         self.lang = lang 
 
-    def embed_fasttext(self, file_path:str, tokenizer_name):
+    def embed_fasttext(self, file_path:str, tokenizer_name:str):
         fasttext.util.download_model(self.lang, if_exists='ignore')
         self.model = fasttext.load_model(f'cc.{self.lang}.300.bin')
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
@@ -213,9 +213,11 @@ class PersistenceDiagram:
 
 
 class Distance:
-    def __init__(self, pd_path: str, file_path: str):
+    def __init__(self, pd_path:str, file_path:str, n_samples:int|None=None):
         self.pd_path = pd_path
         self.list_pds = sorted(os.listdir(pd_path))
+        if n_samples:
+            self.list_pds = [pd for i in range(n_samples) for pd in self.list_pds if str(i) in pd]
         self.file_path = file_path
         self.D_h0 = np.zeros((len(self.list_pds), len(self.list_pds)))
         self.D_h1 = np.zeros((len(self.list_pds), len(self.list_pds)))
