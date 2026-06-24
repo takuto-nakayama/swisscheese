@@ -8,7 +8,7 @@ from sklearn.manifold import MDS
 from transformers import AutoTokenizer, AutoModel
 import matplotlib.pyplot as plt
 import numpy as np
-import csv, fasttext, fasttext.util, h5py, os, pickle, random, torch
+import csv, fasttext, fasttext.util, h5py, os, pickle, random, time, torch
 
 
 
@@ -238,13 +238,16 @@ class Distance:
 
         for i in range(n):
             dgms_i = dgms_all[names[i]]
+            start_i = time.time()
             for j in range(i + 1, n):
+                start_j = time.time()
                 dgms_j = dgms_all[names[j]]
                 d0 = wasserstein(dgms_i[0], dgms_j[0])
                 d1 = wasserstein(dgms_i[1], dgms_j[1])
                 self.D_h0[i, j] =self. D_h0[j, i] = d0
                 self.D_h1[i, j] = self.D_h1[j, i] = d1
-            print(f'{names[i]} is done.')
+                print(f'({names[i]}, {names[j]}): {time.time()-start_j} seconds.')
+            print(f'{names[i]} is done. ({time.time()-start_i} seconds.)')
 
         self._save_csv(self.D_h0, f'{self.file_path}-h0.csv', names)
         self._save_csv(self.D_h1, f'{self.file_path}-h1.csv', names)
