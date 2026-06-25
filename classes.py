@@ -217,7 +217,7 @@ class Distance:
         self.pd_path = pd_path
         self.list_pds = sorted(os.listdir(pd_path))
         if range_samples:
-            self.list_pds = [pd for i in range(range_samples[0],range_samples[1]+1) for pd in self.list_pds if str(i) in pd]
+            self.list_pds = [pd for i in range(range_samples[0],range_samples[1]) for pd in self.list_pds if str(i) in pd]
         self.file_path = file_path
         self.D_h0 = np.zeros((len(self.list_pds), len(self.list_pds)))
         self.D_h1 = np.zeros((len(self.list_pds), len(self.list_pds)))
