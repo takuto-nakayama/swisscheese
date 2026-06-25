@@ -240,18 +240,15 @@ class Distance:
 
         for i in range(n):
             dgms_i = dgms_all[names[i]]
-            start_i = time.time()
+            start = time.time()
             for j in range(i + 1, n):
-                start_j = time.time()
                 dgms_j = dgms_all[names[j]]
                 d0 = wasserstein(dgms_i[0], dgms_j[0])
                 d1 = wasserstein(dgms_i[1], dgms_j[1])
                 self.D_h0[i, j] =self. D_h0[j, i] = d0
                 self.D_h1[i, j] = self.D_h1[j, i] = d1
-                elapsed_j = time.time()-start_j
-                print(f'({names[i][:-4]}, {names[j][:-4]}:   {elapsed_j:.2f}   seconds.')
-            elapsed_i = time.time()-start_i
-            print(f'{names[i][:-6]} is done. ({elapsed_i:.2f}    seconds.)')
+            elapsed = time.time()-start
+            print(f'{names[i][:-6].center(15)} is done. ({str(round(elapsed, 2)).center(10)}seconds.)')
 
         self._save_csv(self.D_h0, f'{self.file_path}-h0.csv', names)
         self._save_csv(self.D_h1, f'{self.file_path}-h1.csv', names)
