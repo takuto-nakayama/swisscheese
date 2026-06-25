@@ -213,11 +213,11 @@ class PersistenceDiagram:
 
 
 class Distance:
-    def __init__(self, pd_path:str, file_path:str, n_samples:int|None=None):
+    def __init__(self, pd_path:str, file_path:str, range_samples:list|None=None):
         self.pd_path = pd_path
         self.list_pds = sorted(os.listdir(pd_path))
-        if n_samples:
-            self.list_pds = [pd for i in range(1,n_samples+1) for pd in self.list_pds if str(i) in pd]
+        if range_samples:
+            self.list_pds = [pd for i in range(range_samples[0],range_samples[1]+1) for pd in self.list_pds if str(i) in pd]
         self.file_path = file_path
         self.D_h0 = np.zeros((len(self.list_pds), len(self.list_pds)))
         self.D_h1 = np.zeros((len(self.list_pds), len(self.list_pds)))
@@ -255,7 +255,7 @@ class Distance:
 
 
     def _save_csv(self, D, path, names):
-        with open(path, 'w', newline='') as f:
+        with open(path, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([''] + list(names))
             for name, row in zip(names, D):
