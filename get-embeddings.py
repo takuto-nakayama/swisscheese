@@ -11,27 +11,27 @@ if __name__=='__main__':
 
 	#  parse the arguments
 	parser.add_argument('path_data')
-	parser.add_argument('-model_name',
+	parser.add_argument('--model_name',
 					 	type=str,
 						default='bert-base-multilingual-uncased')
-	parser.add_argument('-batch',
+	parser.add_argument('--batch',
 					    type=int,
 						default=200)
-	parser.add_argument('-lang',
+	parser.add_argument('--lang',
 					    type=str,
 						default=None)
-	parser.add_argument('-tokenizer_name',
+	parser.add_argument('--tokenizer_name',
 					    type=str,
 						default='bert-base-multilingual-uncased')
-	parser.add_argument('-off_save_emb',
+	parser.add_argument('--off_save_emb',
 					    action='store_false')
-	parser.add_argument('-save_path_emb',
+	parser.add_argument('--save_path_emb',
 					 	type=str,
 						default='embedding')
-	parser.add_argument('-dataset_name',
+	parser.add_argument('--ataset_name',
 					    type=str,
 						default='dataset')
-	parser.add_argument('-wiki',
+	parser.add_argument('--wiki',
 					    action='store_false')
 	
 

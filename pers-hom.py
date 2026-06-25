@@ -16,21 +16,21 @@ if __name__=='__main__':
 					    type=str)
 	parser.add_argument('dataset_name',
 					    type=str)
-	parser.add_argument('-cycle',
+	parser.add_argument('--cycle',
 					    type=int,
 						default=1)
-	parser.add_argument('-thresh',
+	parser.add_argument('--thresh',
 					    type=float,
 						default=1.0)
-	parser.add_argument('-metric',
+	parser.add_argument('--metric',
 					    type=str,
 						default='cosine')
-	parser.add_argument('-num_samples',
+	parser.add_argument('--num_samples',
 					    type=int,
 						default=1000)
-	parser.add_argument('-save_pd',
+	parser.add_argument('--save_pd',
 					    action='store_false')
-	parser.add_argument('-save_path_pd',
+	parser.add_argument('--save_path_pd',
 					    type=str,
 						default='perhom')
 

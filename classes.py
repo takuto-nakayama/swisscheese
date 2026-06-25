@@ -217,7 +217,7 @@ class Distance:
         self.pd_path = pd_path
         self.list_pds = sorted(os.listdir(pd_path))
         if range_samples:
-            self.list_pds = [pd for i in range(range_samples[0],range_samples[1]) for pd in self.list_pds if str(i) in pd]
+            self.list_pds = [pd for i in range(int(range_samples[0]), int(range_samples[1])) for pd in self.list_pds if str(i) in pd]
         self.file_path = file_path
         self.D_h0 = np.zeros((len(self.list_pds), len(self.list_pds)))
         self.D_h1 = np.zeros((len(self.list_pds), len(self.list_pds)))
@@ -248,7 +248,7 @@ class Distance:
                 self.D_h0[i, j] =self. D_h0[j, i] = d0
                 self.D_h1[i, j] = self.D_h1[j, i] = d1
             elapsed = time.time()-start
-            print(f'{names[i][:-6].center(15)} is done. ({str(round(elapsed, 2)).center(10)}seconds.)')
+            print(f'{names[i][:-4].center(30)} is done. ({str(round(elapsed, 2)).center(10)}seconds.)')
 
         self._save_csv(self.D_h0, f'{self.file_path}-h0.csv', names)
         self._save_csv(self.D_h1, f'{self.file_path}-h1.csv', names)

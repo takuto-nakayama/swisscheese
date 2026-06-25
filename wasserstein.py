@@ -17,21 +17,22 @@ if __name__=='__main__':
 					    type=str)
 	parser.add_argument('save_path_pd',
 					    type=str)
-	parser.add_argument('-n_samples',
-					 	type=int,
+	parser.add_argument('--range_samples',
+					 	nargs='*',
+						 type=int,
 						default=None)
 
 	args = parser.parse_args()
 	pd_path			= args.pd_path
 	save_path_pd	= args.save_path_pd
-	n_samples		= args.n_samples
+	range_samples		= args.range_samples
 
 
 	#  main process
 	## gain the wasserstein distance
 	distance = Distance(pd_path=f'{pd_dir}/{pd_path}',
 					    file_path=f'{ws_dir}/{save_path_pd}',
-						n_samples=n_samples)
+						range_samples=range_samples)
 	distance.get_wasserstein()
 	distance.clustering()
 	distance.msd_2d()
