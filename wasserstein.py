@@ -32,7 +32,8 @@ if __name__=='__main__':
 	## gain the wasserstein distance
 	distance = Distance(pd_path=f'{pd_dir}/{pd_path}',
 					    file_path=f'{ws_dir}/{save_path_pd}',
-						range_samples=range_samples)
+						range_samples=range_samples,
+						save_path_pd=save_path_pd)
 	distance.get_wasserstein()
 	distance.clustering()
 	distance.msd_2d()

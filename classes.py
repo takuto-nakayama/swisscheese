@@ -1,4 +1,5 @@
 from datasets import load_dataset
+from datetime import datetime
 from dotenv import load_dotenv
 from persim import plot_diagrams, wasserstein
 from ripser import ripser
@@ -8,7 +9,7 @@ from sklearn.manifold import MDS
 from transformers import AutoTokenizer, AutoModel
 import matplotlib.pyplot as plt
 import numpy as np
-import csv, fasttext, fasttext.util, h5py, os, pickle, random, time, torch
+import csv, fasttext, fasttext.util, h5py, os, pickle, random, re, time, torch
 
 
 
@@ -213,14 +214,16 @@ class PersistenceDiagram:
 
 
 class Distance:
-    def __init__(self, pd_path:str, file_path:str, range_samples:list|None=None):
+    def __init__(self, pd_path:str, file_path:str, save_path_pd, range_samples:list | None=None):
         self.pd_path = pd_path
         self.list_pds = sorted(os.listdir(pd_path))
+        self.file_path = file_path
+        self.save_path_pd    = save_path_pd
         if range_samples:
             self.list_pds = [pd for i in range(int(range_samples[0]), int(range_samples[1])) for pd in self.list_pds if str(i) in pd]
-        self.file_path = file_path
         self.D_h0 = np.zeros((len(self.list_pds), len(self.list_pds)))
         self.D_h1 = np.zeros((len(self.list_pds), len(self.list_pds)))
+
 
 
     def get_wasserstein(self):
@@ -240,6 +243,8 @@ class Distance:
 
         for i in range(n):
             dgms_i = dgms_all[names[i]]
+            start_time = datetime.now().strftime('%Y%m%d%H%m%S')
+            print(f'starts at {start_time[:4]}/{start_time[4:6]}/{start_time[6:8]}/{start_time[8:10]}:{start_time[10:12]}:{start_time[12:]}')
             start = time.time()
             for j in range(i + 1, n):
                 dgms_j = dgms_all[names[j]]
@@ -249,17 +254,35 @@ class Distance:
                 self.D_h1[i, j] = self.D_h1[j, i] = d1
             elapsed = time.time()-start
             print(f'{names[i][:-4].center(30)} is done. ({str(round(elapsed, 2)).center(10)}seconds.)')
-
-        self._save_csv(self.D_h0, f'{self.file_path}-h0.csv', names)
-        self._save_csv(self.D_h1, f'{self.file_path}-h1.csv', names)
+        end_time = datetime.now().strftime('%Y%m%d%H%m%S')
+        print(f'ends at {end_time[:4]}/{end_time[4:6]}/{end_time[6:8]}/{end_time[8:10]}:{end_time[10:12]}:{end_time[12:]}')
+        self._save_csv(self.D_h0, f'{self.file_path}-h0.csv', names=names)
+        self._save_csv(self.D_h1, f'{self.file_path}-h1.csv', names=names)
 
 
     def _save_csv(self, D, path, names):
-        with open(path, 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([''] + list(names))
-            for name, row in zip(names, D):
-                writer.writerow([name] + list(row))
+        dir = os.listdir(ws_dir)
+        for d in dir:
+            match = re.match(d, self.save_path_pd)
+            if match:
+                break
+
+        if match:
+            with open(path, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([''] + list(names))
+                for name, row in zip(names, D):
+                    writer.writerow([name] + list(row))
+
+        else:
+            dir_name = re.match(r'.+?/', self.save_path_pd).group()
+            os.mkdir(f'{ws_dir}/{dir_name}')
+
+            with open(path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([''] + list(names))
+                for name, row in zip(names, D):
+                    writer.writerow([name] + list(row))
 
 
     def clustering(self):
