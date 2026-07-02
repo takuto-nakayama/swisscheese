@@ -28,7 +28,7 @@ if __name__=='__main__':
 	parser.add_argument('--save_path_emb',
 					 	type=str,
 						default='embedding')
-	parser.add_argument('--ataset_name',
+	parser.add_argument('--dataset_name',
 					    type=str,
 						default='dataset')
 	parser.add_argument('--wiki',
