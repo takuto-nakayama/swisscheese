@@ -32,7 +32,7 @@ if __name__=='__main__':
 					    type=str,
 						default='dataset')
 	parser.add_argument('--wiki',
-					    action='store_false')
+					    action='store_true')
 	
 
 	args = parser.parse_args()
@@ -54,18 +54,18 @@ if __name__=='__main__':
 	
 	if wiki:
 		if model_name == 'fasttext':
-			embedding.embed_fasttext(f'{data_dir}/{path_data}',
-									tokenizer_name=tokenizer_name)
-		else:
-			embedding.embed_dynamic(file_path=f'{data_dir}/{path_data}',
-									batch=batch)
-	else:
-		if model_name == 'fasttext':
 			embedding.embed_fasttext_wiki(config=path_data,
 										  tokenizer_name=tokenizer_name)
 		else:
 			embedding.embed_dynamic_wiki(config=path_data,
 										 batch=batch)
+	else:
+		if model_name == 'fasttext':
+			embedding.embed_fasttext(f'{data_dir}/{path_data}',
+									tokenizer_name=tokenizer_name)
+		else:
+			embedding.embed_dynamic(file_path=f'{data_dir}/{path_data}',
+									batch=batch)
 	
 	if off_save_emb:
 		embedding.save(file_path=f'{result_dir}/{save_path_emb}',
