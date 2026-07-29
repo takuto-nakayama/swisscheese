@@ -9,6 +9,7 @@ from sklearn.manifold import MDS
 from transformers import AutoTokenizer, AutoModel
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import csv, fasttext, fasttext.util, h5py, os, pickle, random, re, time, torch
 
 
@@ -19,19 +20,19 @@ result_dir = os.getenv('RESULT_DIR')
 emb_dir = os.getenv('EMB_DIR')
 pd_dir = os.getenv('PD_DIR')
 ws_dir = os.getenv('WS_DIR')
-
+model_dir = os.getenv('MODEL_DIR')
 
 
 class Embedding:
-    def __init__(self, model_name:str, lang:None|str):
+    def __init__(self, model_name:str=None):
         self.model_name = model_name
-        self.lang = lang 
 
-    def embed_fasttext(self, file_path:str, tokenizer_name:str):
+
+    def embed_fasttext(self, file_name:str, tokenizer_name:str):
         fasttext.util.download_model(self.lang, if_exists='ignore')
         self.model = fasttext.load_model(f'cc.{self.lang}.300.bin')
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-        with open(f'{file_path}.txt') as f:
+        with open(f'{file_name}.txt') as f:
             text = f.readlines()
         tokenized = [w for snt in text for w in self.tokenizer.tokenize(snt)]
         tokenized_sorted = sorted(set(tokenized))
@@ -44,195 +45,139 @@ class Embedding:
         self.embeddings = np.vstack(self.embeddings)
 
 
-    def embed_dynamic(self, file_path:str, batch:int):
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = AutoModel.from_pretrained(self.model_name).to(self.device)
-        self.model.eval()
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        with open(f'{file_path}.txt') as f:
+    def embed_dynamic(self, file_name:str, batch:int):
+        with open(f'{data_dir}/{file_name}.txt') as f:
             text = f.readlines()
             text = [t.strip() for t in text]
-        cycle = len(text) // batch
-        start = 0
+        text = sorted(text, key='len')
+
         self.embeddings = []
-
-        for c in range(1, cycle+2):
-            if c <= cycle:
-                text_batched  = text[start:batch*c]
-            elif len(text) % batch != 0:
-                text_batched = text[start:]
-            else:
-                break
-            inputs = self.tokenizer(text_batched,
-                                    return_tensors='pt',
-                                    truncation=True,
-                                    padding=True,
-                                    max_length=512,
-                                    return_special_tokens_mask=True)
-            inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            special_mask = inputs.pop('special_tokens_mask').bool()
-            
-            if self.lang:
-                lang_id = self.tokenizer.lang2id[self.lang]
-                langs = torch.full_like(inputs['input_ids'],
-                                        lang_id)
-                with torch.no_grad():
-                    outputs = self.model(input_ids=inputs['input_ids'],
-                                           langs=langs)
-            else:
-                with torch.no_grad():
-                    outputs = self.model(**inputs)
-        
-            hidden = outputs.last_hidden_state
-            attention_mask = inputs['attention_mask'].bool()
-            keep = attention_mask & (~special_mask)
-            self.embeddings.append(hidden[keep].cpu().numpy())
-            
-            start += batch
-
-        self.embeddings = np.vstack(self.embeddings)
-
-
-    def embed_fasttext_wiki(self, config:str, tokenizer_name:str):
-        dataset = load_dataset('wikimedia/wikipedia',
-                               config,
-                               split='train')
-        indices = random.sample(range(len(dataset)),
-                                  k=5000)
-        sampled = dataset.select(indices)
-        sentences = []
-        self.embeddings = []
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-        fasttext.util.download_model(self.lang, if_exists='ignore')
-        self.model = fasttext.load_model(f'cc.{self.lang}.300.bin')
-
-        for article in sampled:
-            paragraphs = article['text'].split('\n')
-            for para in paragraphs:
-                if para.strip():
-                    sentences.append(para.strip())
-
-        tokenized = [w for snt in sentences for w in self.tokenizer.tokenize(snt)]
-        tokenized_sorted = sorted(set(tokenized))
-        for t in tokenized_sorted:
-            vec = self.model.get_word_vector(t)
-            self.embeddings.append(vec)
-
-        self.embeddings = np.vstack(self.embeddings)
-
-
-    def embed_dynamic_wiki(self, config:str, batch:int):
-        dataset = load_dataset('wikimedia/wikipedia',
-                               config,
-                               split='train')
-        indices = random.sample(range(len(dataset)),
-                                k=5000)
-        sampled = dataset.select(indices)
-        sentences = []
-        self.embeddings = []
-
-        for article in sampled:
-            paragraphs = article['text'].split('\n')
-            for para in paragraphs:
-                if para.strip():
-                    sentences.append(para.strip())
-
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         self.model = AutoModel.from_pretrained(self.model_name).to(self.device)
         self.model.eval()
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
-        cycles = len(sentences) // batch
-        start = 0
-        for c in range(1, cycles+2):
-            if c <= cycles:
-                sentences_batched = sentences[start:batch*c]
-            elif len(sentences) % batch != 0:
-                sentences_batched = sentences[start:]
-            else:
-                break
-            inputs = self.tokenizer(sentences_batched,
-                                    return_tensors='pt',
-                                    truncation=True,
-                                    padding=True,
-                                    max_length=512,
-                                    return_special_tokens_mask=True)
+        for i in range(0, len(text), batch):
+            text_batched = text[i:min(i+batch, len(text))]
+            inputs = self.tokenizer(
+                text_batched,
+                return_tensors='pt',
+                truncation=True,
+                padding=True,
+                max_length=512,
+                return_special_tokens_mask=True
+                )
             inputs = {k: v.to(self.device) for k, v in inputs.items()}
-            special_mask = inputs.pop('special_tokens_mask').bool()
-
+            special_mask = inputs.pop('special_tokens_mask').bool()  
             with torch.no_grad():
                 outputs = self.model(**inputs)
-
             hidden = outputs.last_hidden_state
             attention_mask = inputs['attention_mask'].bool()
             keep = attention_mask & (~special_mask)
-
             self.embeddings.append(hidden[keep].cpu().numpy())
-            start += batch
 
         self.embeddings = np.vstack(self.embeddings)
+
+
+    def embed_fasttext_model(self, id:str, num_samples:int=10000, seed:int=42):
+        self.model = fasttext.load_model(f'{model_dir}/cc.{id}.300.bin')
+        random.seed(seed)
+        input_matrix = self.model.get_input_matrix()
+        indice = random.sample(range(len(input_matrix)), k=num_samples)
+        self.embeddings = input_matrix[indice]
+
+
+    def embed_dynamic_wiki(self, config:str, batch:int, num_samples:int=10000, seed:int=42):
+        dataset = load_dataset(
+            'wikimedia/wikipedia',
+            config,
+            split='train'
+            )
+        random.seed(seed)
+        indice = random.sample(range(0,len(dataset)),k=num_samples)
+        cnt = 0
+        length = 0
+
+        while length < num_samples:
+            article = dataset.select(indice[cnt])
+            sentences = []
+            paragraphs = article['text'].split('\n')
+            for para in paragraphs:
+                if para.strip():
+                    sentences.append(para.strip())
+            sentences = sorted(sentences, key='len')
+
+            self.embeddings = []
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            self.model = AutoModel.from_pretrained(self.model_name).to(self.device)
+            self.model.eval()
+
+            for i in range(0, len(sentences), batch):
+                snt_batched = sentences[i:min(i+batch, len(sentences))]
+                inputs = self.tokenizer(
+                    snt_batched,
+                    return_tensors='pt',
+                    truncation=True,
+                    padding=True,
+                    max_length=512,
+                    return_special_tokens_mask=True
+                    )
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+                special_mask = inputs.pop('special_tokens_mask').bool()
+                with torch.no_grad():
+                    outputs = self.model(**inputs)
+                hidden = outputs.last_hidden_state
+                attention_mask = inputs['attention_mask'].bool()
+                keep = attention_mask & (~special_mask)
+                self.embeddings.append(hidden[keep].cpu().numpy())
+                length += len(hidden[keep].cpu().numpy())
+
+            cnt += 1
+
+        self.embeddings = np.vstack(self.embeddings[:num_samples])
     
 
-    def save(self, file_path:str, dataset:str):
-        with h5py.File(f'{file_path}.h5', 'a') as f:
-            f.create_dataset(dataset, data=self.embeddings)
-        print(
-            f'''{dataset} in {file_path}.h5
-                {len(self.embeddings)} embeddings saved.
-            ''')
+
+class PersistenceDiagram(Embedding):
+    def __init__(self):
+        pass
 
 
+    def pers_homology(self, thresh:float=3.0, metric:str='euclidean', save:bool=None, file_name:str=None):
+        self.filtration = ripser(
+            self.embeddings,
+            thresh=thresh,
+            metric=metric
+            )
+        self.dgms = self.filtration['dgms']
 
-class PersistenceDiagram:
-    def __init__(self, file_path:str, dataset:str):
-        self.file_path = file_path + '.h5'
-        self.dataset = dataset
+        if save:
+            record = {
+                'dgms':self.dgms,
+                'num_embeddings':len(self.embeddings)
+            }
 
-    
-    def pers_hom(self, thresh:float, metric:str, num_samples:int, save:bool, file_path:str):
-        with h5py.File(self.file_path, 'r') as f:
-            self.data = f[self.dataset]
-            n = len(self.data)
-            samples = sorted(random.sample(range(n), num_samples))
-            sampled_embedding = self.data[samples]
-
-            self.filtration = ripser(sampled_embedding,
-                                     thresh=thresh,
-                                     metric=metric)
-            self.dgms = self.filtration['dgms']
-
-            if save:
-                record = {
-                    'dgms':            self.dgms,
-                    'n_points':        len(self.data),
-                    'num_samples':    num_samples
-                }
-
-                with open(f'{file_path}.pkl', 'wb') as f:
-                    pickle.dump(record, f)
+            with open(f'{pd_dir}/{file_name}.pkl', 'wb') as f:
+                pickle.dump(record, f)
 
 
 
 class Distance:
-    def __init__(self, pd_path:str, file_path:str, save_path_pd, range_samples:list | None=None):
-        self.pd_path = pd_path
-        self.list_pds = sorted(os.listdir(pd_path))
-        self.file_path = file_path
-        self.save_path_pd    = save_path_pd
-        if range_samples:
-            self.list_pds = [pd for i in range(int(range_samples[0]), int(range_samples[1])) for pd in self.list_pds if str(i) in pd]
+    def __init__(self, dir_name:str, save_name:str):
+        self.dir_name = dir_name
+        self.save_name = save_name
+        self.list_pds = os.listdir(f'{pd_dir}/{self.dir_name}')
         self.D_h0 = np.zeros((len(self.list_pds), len(self.list_pds)))
         self.D_h1 = np.zeros((len(self.list_pds), len(self.list_pds)))
 
 
-
     def get_wasserstein(self):
-        names = self.list_pds
-        n = len(names)
+        langs = [l.split('-')[-2]+l.split('-')[-1] for l in self.list_pds]
         dgms_all = {}
-        for pd in names:
-            with open(f'{self.pd_path}/{pd}', 'rb') as f:
-                dgms_all[pd] = pickle.load(f)['dgms']
+        for pedg, lang in zip(self.list_pds, langs):
+            with open(f'{pd_dir}/{self.dir_name}/{pedg}', 'rb') as f:
+                dgms_all[lang] = pickle.load(f)['dgms']
 
         def finite(dgm):
             return dgm[np.isfinite(dgm[:, 1])]
@@ -241,48 +186,37 @@ class Distance:
             for k, v in dgms_all.items()
         }
 
-        for i in range(n):
-            dgms_i = dgms_all[names[i]]
+        for i, lang_i in enumerate(langs):
+            dgms_i = dgms_all[lang_i]
+
             start_time = datetime.now().strftime('%Y%m%d%H%m%S')
             print(f'starts at {start_time[:4]}/{start_time[4:6]}/{start_time[6:8]}/{start_time[8:10]}:{start_time[10:12]}:{start_time[12:]}')
             start = time.time()
-            for j in range(i + 1, n):
-                dgms_j = dgms_all[names[j]]
+
+            for j, lang_j in range(i + 1, len(langs)):
+                dgms_j = dgms_all[langs[j]]
                 d0 = wasserstein(dgms_i[0], dgms_j[0])
                 d1 = wasserstein(dgms_i[1], dgms_j[1])
-                self.D_h0[i, j] =self. D_h0[j, i] = d0
+                self.D_h0[i, j] = self.D_h0[j, i] = d0
                 self.D_h1[i, j] = self.D_h1[j, i] = d1
             elapsed = time.time()-start
-            print(f'{names[i][:-4].center(30)} is done. ({str(round(elapsed, 2)).center(10)}seconds.)')
+            print(f'{lang_j.center(30)} is done. ({str(round(elapsed, 2)).center(10)}seconds.)')
+
         end_time = datetime.now().strftime('%Y%m%d%H%m%S')
         print(f'ends at {end_time[:4]}/{end_time[4:6]}/{end_time[6:8]}/{end_time[8:10]}:{end_time[10:12]}:{end_time[12:]}')
-        self._save_csv(self.D_h0, f'{self.file_path}-h0.csv', names=names)
-        self._save_csv(self.D_h1, f'{self.file_path}-h1.csv', names=names)
 
-
-    def _save_csv(self, D, path, names):
-        dir = os.listdir(ws_dir)
-        for d in dir:
-            match = re.match(d, self.save_path_pd)
-            if match:
-                break
-
-        if match:
-            with open(path, 'a', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow([''] + list(names))
-                for name, row in zip(names, D):
-                    writer.writerow([name] + list(row))
-
-        else:
-            dir_name = re.match(r'.+?/', self.save_path_pd).group()
-            os.mkdir(f'{ws_dir}/{dir_name}')
-
-            with open(path, 'w', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow([''] + list(names))
-                for name, row in zip(names, D):
-                    writer.writerow([name] + list(row))
+        df_h0 = pd.DataFrame(
+            self.D_h0,
+            columns=langs,
+            index=langs
+            )
+        df_h1 = pd.DataFrame(
+            self.D_h1,
+            columns=langs,
+            index=langs
+            )
+        df_h0.to_csv(f'{ws_dir}/{self.save_name}-h0.csv')
+        df_h1.to_csv(f'{ws_dir}/{self.save_name}-h1.csv')
 
 
     def clustering(self):
@@ -294,12 +228,12 @@ class Distance:
         plt.figure(figsize=(6, 4))
         dendrogram(self.Z_h0, labels=self.list_pds)
         plt.ylabel('Distance')
-        plt.savefig(f'{self.file_path}-dendrogram-h0.png')
+        plt.savefig(f'{self.save_name}-dendrogram-h0.png')
 
         plt.figure(figsize=(6, 4))
         dendrogram(self.Z_h1, labels=self.list_pds)
         plt.ylabel('Distance')
-        plt.savefig(f'{self.file_path}-dendrogram-h1.png')
+        plt.savefig(f'{self.save_name}-dendrogram-h1.png')
 
 
     def msd_2d(self):
@@ -308,29 +242,17 @@ class Distance:
         coords_h1 = mds.fit_transform(self.D_h1)
 
         plt.figure(figsize=(6, 5))
-        plt.scatter(coords_h0[:, 0],
-                    coords_h0[:, 1])
-#        for i, txt in enumerate(self.list_pds):
-#            plt.annotate(txt,
-#                         (coords_h0[i, 0], coords_h0[i, 1]),
-#                         textcoords="offset points",
-#                         xytext=(0, 10),
-#                         ha="center",
-#                         fontsize=12,
-#                         weight="bold")
+        plt.scatter(
+            coords_h0[:, 0],
+            coords_h0[:, 1]
+            )
         plt.grid(True, linestyle="--", alpha=0.6)
-        plt.savefig(f'{self.file_path}-mds-h0.png')
+        plt.savefig(f'{self.save_name}-mds-h0.png')
 
         plt.figure(figsize=(6, 5))
-        plt.scatter(coords_h1[:, 0],
-                    coords_h1[:, 1])
- #       for i, txt in enumerate(self.list_pds):
- #           plt.annotate(txt,
- #                        (coords_h1[i, 0], coords_h1[i, 1]),
- #                        textcoords="offset points",
- #                        xytext=(0, 10),
- #                        ha="center",
- #                        fontsize=12,
- #                        weight="bold")
+        plt.scatter(
+            coords_h1[:, 0],
+            coords_h1[:, 1]
+            )
         plt.grid(True, linestyle="--", alpha=0.6)
-        plt.savefig(f'{self.file_path}-mds-h1.png')
+        plt.savefig(f'{self.save_name}-mds-h1.png')

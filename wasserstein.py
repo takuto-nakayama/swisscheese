@@ -1,39 +1,23 @@
 from classes import Distance
-from dotenv import load_dotenv
-import argparse, os
+import argparse
 import warnings
 
 if __name__=='__main__':
-	#  load the environment variables
-	load_dotenv()
-	pd_dir = os.getenv('PD_DIR')
-	ws_dir = os.getenv('WS_DIR')
 	parser = argparse.ArgumentParser()
 	warnings.filterwarnings('ignore', message='dgm1 has points with non-finite death times')
 
-
-	#  parse the arguments
-	parser.add_argument('pd_path',
-					    type=str)
-	parser.add_argument('save_path_pd',
-					    type=str)
-	parser.add_argument('--range_samples',
-					 	nargs='*',
-						 type=int,
-						default=None)
+	parser.add_argument('dir_name')
+	parser.add_argument('save_name')
+	parser.add_argument('--range_samples',nargs='*',default=None)
 
 	args = parser.parse_args()
-	pd_path			= args.pd_path
-	save_path_pd	= args.save_path_pd
-	range_samples		= args.range_samples
+	dir_name = args.dir_name
+	save_name = args.save_name
 
-
-	#  main process
-	## gain the wasserstein distance
-	distance = Distance(pd_path=f'{pd_dir}/{pd_path}',
-					    file_path=f'{ws_dir}/{save_path_pd}',
-						range_samples=range_samples,
-						save_path_pd=save_path_pd)
+	distance = Distance(
+		dir_name=dir_name,
+		save_name=save_name,
+		)
 	distance.get_wasserstein()
 	distance.clustering()
 	distance.msd_2d()
