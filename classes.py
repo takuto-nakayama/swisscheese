@@ -4,8 +4,11 @@ from dotenv import load_dotenv
 from persim import plot_diagrams, wasserstein
 from ripser import ripser
 from scipy.cluster.hierarchy import linkage, dendrogram
+from scipy.sparse.csgraph import minimum_spanning_tree
+from scipy.sparse import csr_matrix
 from scipy.spatial.distance import squareform
 from sklearn.manifold import MDS
+from sklearn.metrics import pairwise_distances
 from transformers import AutoTokenizer, AutoModel
 import matplotlib.pyplot as plt
 import numpy as np
@@ -140,26 +143,30 @@ class Embedding:
 
 
 class PersistenceDiagram(Embedding):
-    def __init__(self):
-        pass
+    def __init__(self, seed:int=42, num_samples:int=10000):
+        random.seed(seed)
+        indices = sorted(random.sample(range(0,self.embeddings.shape[0]), k=num_samples))
+        sampled_embeddings = self.embeddings[indices]
+        mean_norm = np.linalg.norm(sampled_embeddings, axis=1).mean()
+        self.scaled_embeddings = sampled_embeddings / mean_norm
+        dist_matrix = pairwise_distances(self.scaled_embeddings, metric='euclidean')
+        mst = minimum_spanning_tree(csr_matrix(dist_matrix))
+        self.max_mst = mst.data.max()
 
 
-    def pers_homology(self, thresh:float=3.0, metric:str='euclidean', save:bool=None, file_name:str=None):
+    def pers_homology(self, file_name:str=None):
         self.filtration = ripser(
-            self.embeddings,
-            thresh=thresh,
-            metric=metric
+            self.scaled_embeddings,
+            thresh=self.max_mst,
             )
         self.dgms = self.filtration['dgms']
+        record = {
+            'dgms':self.dgms,
+            'num_embeddings':len(self.embeddings)
+        }
 
-        if save:
-            record = {
-                'dgms':self.dgms,
-                'num_embeddings':len(self.embeddings)
-            }
-
-            with open(f'{pd_dir}/{file_name}.pkl', 'wb') as f:
-                pickle.dump(record, f)
+        with open(f'{pd_dir}/{file_name}.pkl', 'wb') as f:
+            pickle.dump(record, f)
 
 
 
