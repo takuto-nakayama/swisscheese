@@ -215,8 +215,8 @@ class Distance:
             columns=langs,
             index=langs
             )
-        df_h0.to_csv(f'{ws_dir}/{self.save_name}-h0.csv')
-        df_h1.to_csv(f'{ws_dir}/{self.save_name}-h1.csv')
+        df_h0.to_csv(f'{ws_dir}/{self.dir_name}/{self.save_name}-h0.csv')
+        df_h1.to_csv(f'{ws_dir}/{self.dir_name}/{self.save_name}-h1.csv')
 
 
     def clustering(self):
@@ -228,12 +228,12 @@ class Distance:
         plt.figure(figsize=(6, 4))
         dendrogram(self.Z_h0, labels=self.list_pds)
         plt.ylabel('Distance')
-        plt.savefig(f'{self.save_name}-dendrogram-h0.png')
+        plt.savefig(f'{ws_dir}/{self.dir_name}/{self.save_name}-dendrogram-h0.png')
 
         plt.figure(figsize=(6, 4))
         dendrogram(self.Z_h1, labels=self.list_pds)
         plt.ylabel('Distance')
-        plt.savefig(f'{self.save_name}-dendrogram-h1.png')
+        plt.savefig(f'{ws_dir}/{self.dir_name}/{self.save_name}-dendrogram-h1.png')
 
 
     def msd_2d(self):
@@ -247,7 +247,7 @@ class Distance:
             coords_h0[:, 1]
             )
         plt.grid(True, linestyle="--", alpha=0.6)
-        plt.savefig(f'{self.save_name}-mds-h0.png')
+        plt.savefig(f'{ws_dir}/{self.dir_name}/{self.save_name}-mds-h0.png')
 
         plt.figure(figsize=(6, 5))
         plt.scatter(
@@ -255,4 +255,4 @@ class Distance:
             coords_h1[:, 1]
             )
         plt.grid(True, linestyle="--", alpha=0.6)
-        plt.savefig(f'{self.save_name}-mds-h1.png')
+        plt.savefig(f'{ws_dir}/{self.dir_name}/{self.save_name}-mds-h1.png')
