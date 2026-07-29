@@ -144,7 +144,8 @@ class Embedding:
 
 class PersistenceDiagram(Embedding):
     def __init__(self, seed:int=42, num_samples:int=10000):
-        random.seed(seed)
+        self.seed = seed
+        random.seed(self.seed)
         indices = sorted(random.sample(range(0,self.embeddings.shape[0]), k=num_samples))
         sampled_embeddings = self.embeddings[indices]
         mean_norm = np.linalg.norm(sampled_embeddings, axis=1).mean()
@@ -162,10 +163,10 @@ class PersistenceDiagram(Embedding):
         self.dgms = self.filtration['dgms']
         record = {
             'dgms':self.dgms,
-            'num_embeddings':len(self.embeddings)
+            'num_embeddings':len(self.scaled_embeddings)
         }
 
-        with open(f'{pd_dir}/{file_name}.pkl', 'wb') as f:
+        with open(f'{pd_dir}/{file_name}-{self.seed}.pkl', 'wb') as f:
             pickle.dump(record, f)
 
 
