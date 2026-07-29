@@ -143,13 +143,14 @@ class Embedding:
 
 
 class PersistenceDiagram(Embedding):
-    def __init__(self, seed:int=42, num_samples:int=10000):
-        self.seed = seed
-        random.seed(self.seed)
-        indices = sorted(random.sample(range(0,self.embeddings.shape[0]), k=num_samples))
-        sampled_embeddings = self.embeddings[indices]
-        mean_norm = np.linalg.norm(sampled_embeddings, axis=1).mean()
-        self.scaled_embeddings = sampled_embeddings / mean_norm
+    def __init__(self, seed:int=None, num_samples:int=10000):
+        embeddings = self.embeddings
+        if seed:
+            random.seed(seed)
+            indices = sorted(random.sample(range(0,embeddings.shape[0]), k=num_samples))
+            embeddings = embeddings[indices]
+        mean_norm = np.linalg.norm(embeddings, axis=1).mean()
+        self.scaled_embeddings = embeddings / mean_norm
         dist_matrix = pairwise_distances(self.scaled_embeddings, metric='euclidean')
         mst = minimum_spanning_tree(csr_matrix(dist_matrix))
         self.max_mst = mst.data.max()
@@ -166,7 +167,7 @@ class PersistenceDiagram(Embedding):
             'num_embeddings':len(self.scaled_embeddings)
         }
 
-        with open(f'{pd_dir}/{file_name}-{self.seed}.pkl', 'wb') as f:
+        with open(f'{pd_dir}/{file_name}.pkl', 'wb') as f:
             pickle.dump(record, f)
 
 

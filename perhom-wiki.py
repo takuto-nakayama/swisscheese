@@ -21,5 +21,5 @@ if __name__=='__main__':
 	embedding = Embedding(model_name=model_name)
 	embedding.embed_dynamic_wiki(config=config, batch=batch, seed=seed)
 
-	pedg = PersistenceDiagram(seed=seed)
-	pedg.pers_homology(file_path=save_name)
+	pedg = PersistenceDiagram()
+	pedg.pers_homology(file_path=f'{save_name}')

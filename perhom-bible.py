@@ -23,4 +23,4 @@ if __name__=='__main__':
 
 	for seed in range(seed_range):
 		pedg = PersistenceDiagram(seed=seed)
-		pedg.pers_homology(file_path=save_name)
+		pedg.pers_homology(file_path=f'{save_name}-{seed}')
