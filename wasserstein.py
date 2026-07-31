@@ -8,7 +8,6 @@ if __name__=='__main__':
 
 	parser.add_argument('dir_name')
 	parser.add_argument('save_name')
-	parser.add_argument('--range_samples',nargs='*',default=None)
 
 	args = parser.parse_args()
 	dir_name = args.dir_name

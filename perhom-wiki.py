@@ -22,4 +22,4 @@ if __name__=='__main__':
 	embedding.embed_dynamic_wiki(config=config, batch=batch, seed=seed)
 
 	pedg = PersistenceDiagram()
-	pedg.pers_homology(file_path=f'{save_name}')
+	pedg.pers_homology(file_name=f'{save_name}')

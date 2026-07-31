@@ -202,14 +202,14 @@ class Distance:
             print(f'starts at {start_time[:4]}/{start_time[4:6]}/{start_time[6:8]}/{start_time[8:10]}:{start_time[10:12]}:{start_time[12:]}')
             start = time.time()
 
-            for j, lang_j in range(i + 1, len(langs)):
+            for j in range(i + 1, len(langs)):
                 dgms_j = dgms_all[langs[j]]
                 d0 = wasserstein(dgms_i[0], dgms_j[0])
                 d1 = wasserstein(dgms_i[1], dgms_j[1])
                 self.D_h0[i, j] = self.D_h0[j, i] = d0
                 self.D_h1[i, j] = self.D_h1[j, i] = d1
             elapsed = time.time()-start
-            print(f'{lang_j.center(30)} is done. ({str(round(elapsed, 2)).center(10)}seconds.)')
+            print(f'{langs[j].center(30)} is done. ({str(round(elapsed, 2)).center(10)}seconds.)')
 
         end_time = datetime.now().strftime('%Y%m%d%H%m%S')
         print(f'ends at {end_time[:4]}/{end_time[4:6]}/{end_time[6:8]}/{end_time[8:10]}:{end_time[10:12]}:{end_time[12:]}')
