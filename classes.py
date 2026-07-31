@@ -52,7 +52,7 @@ class Embedding:
         with open(f'{data_dir}/{file_name}.txt') as f:
             text = f.readlines()
             text = [t.strip() for t in text]
-        text = sorted(text, key='len')
+        text = sorted(text, key=len)
 
         self.embeddings = []
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -108,7 +108,7 @@ class Embedding:
             for para in paragraphs:
                 if para.strip():
                     sentences.append(para.strip())
-            sentences = sorted(sentences, key='len')
+            sentences = sorted(sentences, key=len)
 
             self.embeddings = []
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
