@@ -86,25 +86,25 @@ class Embedding:
         self.model = fasttext.load_model(f'{model_dir}/cc.{id}.300.bin')
         random.seed(seed)
         input_matrix = self.model.get_input_matrix()
-        indice = random.sample(range(len(input_matrix)), k=num_samples)
-        self.embeddings = input_matrix[indice]
+        indices = random.sample(range(len(input_matrix)), k=num_samples)
+        self.embeddings = input_matrix[indices]
 
 
-    def embed_dynamic_wiki(self, config:str, batch:int, num_samples:int=10000, seed:int=42):
+    def embed_dynamic_wiki(self, config:str, batch:int, num_samples:int=5000, seed:int=42):
         dataset = load_dataset(
             'wikimedia/wikipedia',
             config,
             split='train'
             )
         random.seed(seed)
-        indice = random.sample(range(0,len(dataset)),k=num_samples)
+        indices = sorted(random.sample(range(0,len(dataset)),k=num_samples))
+        articles = dataset.select(indices)
         cnt = 0
         length = 0
 
         while length < num_samples:
-            article = dataset.select(indice[cnt])
             sentences = []
-            paragraphs = article['text'].split('\n')
+            paragraphs = articles[cnt]['text'].split('\n')
             for para in paragraphs:
                 if para.strip():
                     sentences.append(para.strip())
@@ -144,10 +144,10 @@ class Embedding:
 
 class PersistenceDiagram:
     def __init__(self, embeddings, seed:int=None, num_samples:int=10000):
-        if seed:
+        if seed is not None:
             random.seed(seed)
-            indices = sorted(random.sample(range(0,embeddings.shape[0]), k=num_samples))
-            embeddings = embeddings[indices]
+            indicess = sorted(random.sample(range(0,embeddings.shape[0]), k=num_samples))
+            embeddings = embeddings[indicess]
         mean_norm = np.linalg.norm(embeddings, axis=1).mean()
         self.scaled_embeddings = embeddings / mean_norm
         dist_matrix = pairwise_distances(self.scaled_embeddings, metric='euclidean')
