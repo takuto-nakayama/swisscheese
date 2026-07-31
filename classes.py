@@ -142,9 +142,8 @@ class Embedding:
     
 
 
-class PersistenceDiagram(Embedding):
-    def __init__(self, seed:int=None, num_samples:int=10000):
-        embeddings = self.embeddings
+class PersistenceDiagram:
+    def __init__(self, embeddings, seed:int=None, num_samples:int=10000):
         if seed:
             random.seed(seed)
             indices = sorted(random.sample(range(0,embeddings.shape[0]), k=num_samples))
