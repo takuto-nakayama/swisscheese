@@ -22,5 +22,5 @@ if __name__=='__main__':
 	embedding.embed_dynamic(file_name=text_name, batch=batch)
 
 	for seed in range(seed_range):
-		pedg = PersistenceDiagram(seed=seed)
+		pedg = PersistenceDiagram(embeddings=embedding.embeddings, seed=seed)
 		pedg.pers_homology(file_name=f'{save_name}-{seed}')
