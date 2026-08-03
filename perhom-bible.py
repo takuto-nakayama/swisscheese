@@ -7,8 +7,8 @@ if __name__=='__main__':
 	parser.add_argument('model_name')
 	parser.add_argument('text_name')
 	parser.add_argument('save_name')
-	parser.add_argument('--batch', default=100)
-	parser.add_argument('--seed_range', default=10)
+	parser.add_argument('--batch', type=int, default=100)
+	parser.add_argument('--seed_range', type=int, default=10)
 
 	args = parser.parse_args()
 	model_name = args.model_name
@@ -22,5 +22,5 @@ if __name__=='__main__':
 	embedding.embed_dynamic(file_name=text_name, batch=batch)
 
 	for seed in range(seed_range):
-		pedg = PersistenceDiagram(seed=seed)
+		pedg = PersistenceDiagram(embedding.embeddings, seed=seed)
 		pedg.pers_homology(file_name=f'{save_name}-{seed}')

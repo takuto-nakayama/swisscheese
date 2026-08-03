@@ -144,12 +144,13 @@ class Embedding:
 
 class PersistenceDiagram:
     def __init__(self, embeddings, seed:int=None, num_samples:int=10000):
-        if seed:
+        sampled_embeddings = embeddings
+        if seed is not None:
             random.seed(seed)
             indices = sorted(random.sample(range(0,embeddings.shape[0]), k=num_samples))
-            embeddings = embeddings[indices]
-        mean_norm = np.linalg.norm(embeddings, axis=1).mean()
-        self.scaled_embeddings = embeddings / mean_norm
+            sampled_embeddings = embeddings[indices]
+        mean_norm = np.linalg.norm(sampled_embeddings, axis=1).mean()
+        self.scaled_embeddings = sampled_embeddings / mean_norm
         dist_matrix = pairwise_distances(self.scaled_embeddings, metric='euclidean')
         mst = minimum_spanning_tree(csr_matrix(dist_matrix))
         self.max_mst = mst.data.max()
