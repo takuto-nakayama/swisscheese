@@ -18,5 +18,5 @@ if __name__=='__main__':
 	embedding = Embedding(lang=id)
 	embedding.embed_fasttext_model(seed=seed)
 
-	pedg = PersistenceDiagram()
+	pedg = PersistenceDiagram(embeddings=embedding.embeddings)
 	pedg.pers_homology(file_path=save_name)
