@@ -274,22 +274,14 @@ class Distance:
                 h1_j = h1_j[np.isfinite(h1_j).all(axis=1)]
                 
                 pilot_dist_h0, _, _ = _swd(X=h0_i, Y=h0_j, p=p, n_directions=n_directions, seed=seed)
-                print(f'pilot distances to {self.list_pds[j]} are taken')
                 numdir_h0 = estimate_L(pilot_dist_h0, p=p, eps=eps, z=z, max_L=max_L)
-                print(f'number of directions are set ({numdir_h0})')
                 _, swd_h0, se_h0 = _swd(h0_i, h0_j, n_directions=numdir_h0, p=p,  seed=seed)
-                print(f'swd is given ({swd_h0})')
                 ci_low_h0, ci_high_h0 = swd_h0 - z * se_h0, swd_h0 + z * se_h0
-                print(f'summary ->  swd:{swd_h0}, se:{se_h0}, ci:[{ci_low_h0}, {ci_high_h0}]')
 
                 pilot_dist_h1, _, _ = _swd(h1_i, h1_j, p=p, n_directions=n_directions, seed=seed)
-                print(f'pilot distances to {self.list_pds[j]} are taken')
                 numdir_h1 = estimate_L(pilot_dist_h1, p=p, eps=eps, z=z, max_L=max_L)
-                print(f'number of directions are set ({numdir_h1})')
                 _, swd_h1, se_h1 = _swd(h1_i, h1_j, n_directions=numdir_h1, p=p, seed=seed)
-                print(f'swd is given ({swd_h1})')
                 ci_low_h1, ci_high_h1 = swd_h1 - z * se_h1, swd_h1 + z * se_h1
-                print(f'summary ->  swd:{swd_h1}, se:{se_h1}, ci:[{ci_low_h1}, {ci_high_h1}]')
 
                 self.D_h0[i,j] = self.D_h0[j,i] = swd_h0
                 self.D_h1[i,j] = self.D_h1[j,i] = swd_h1
