@@ -136,7 +136,7 @@ class Embedding:
                 inputs = {k: v.to(device) for k, v in inputs.items()}
                 special_mask = inputs.pop('special_tokens_mask').bool()
                 with torch.no_grad():
-                    outputs = self.model(**inputs)
+                    outputs = model(**inputs)
                 hidden = outputs.last_hidden_state
                 attention_mask = inputs['attention_mask'].bool()
                 keep = attention_mask & (~special_mask)
