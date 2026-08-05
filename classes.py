@@ -133,7 +133,7 @@ class Embedding:
                     max_length=512,
                     return_special_tokens_mask=True
                     )
-                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+                inputs = {k: v.to(device) for k, v in inputs.items()}
                 special_mask = inputs.pop('special_tokens_mask').bool()
                 with torch.no_grad():
                     outputs = self.model(**inputs)
