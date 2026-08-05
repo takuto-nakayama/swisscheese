@@ -83,42 +83,34 @@ class Embedding:
         random.seed(seed)
         indices = sorted(random.sample(range(0,len(dataset)),k=num_samples))
         articles = dataset.select(indices)
-        cnt = 0
-        length = 0
         self.embeddings = []
+        sentences = []
+        for article in articles:
+            for paragraph in article['text'].split('\n'):
+                if paragraph.strip():
+                    sentences.append(paragraph.strip())
+        sentences = sorted(sentences, key=len)
 
-        while length < num_samples:
-            sentences = []
-            paragraphs = articles[cnt]['text'].split('\n')
-            for para in paragraphs:
-                if para.strip():
-                    sentences.append(para.strip())
-            sentences = sorted(sentences, key=len)
-
-            for i in range(0, len(sentences), batch):
-                snt_batched = sentences[i:min(i+batch, len(sentences))]
-                inputs = self.tokenizer(
-                    snt_batched,
-                    return_tensors='pt',
-                    truncation=True,
-                    padding=True,
-                    max_length=512,
-                    return_special_tokens_mask=True
-                    )
-                inputs = {k: v.to(self.device) for k, v in inputs.items()}
-                special_mask = inputs.pop('special_tokens_mask').bool()
-                with torch.no_grad():
-                    outputs = self.model(**inputs)
-                hidden = outputs.last_hidden_state
-                attention_mask = inputs['attention_mask'].bool()
-                keep = attention_mask & (~special_mask)
-                self.embeddings.append(hidden[keep].cpu().numpy())
-                length += len(hidden[keep].cpu().numpy())
-
-            cnt += 1
+        for i in range(0, len(sentences), batch):
+            snt_batched = sentences[i:min(i+batch, len(sentences))]
+            inputs = self.tokenizer(
+                snt_batched,
+                return_tensors='pt',
+                truncation=True,
+                padding=True,
+                max_length=512,
+                return_special_tokens_mask=True
+                )
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+            special_mask = inputs.pop('special_tokens_mask').bool()
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+            hidden = outputs.last_hidden_state
+            attention_mask = inputs['attention_mask'].bool()
+            keep = attention_mask & (~special_mask)
+            self.embeddings.append(hidden[keep].cpu().numpy())
 
         self.embeddings = np.vstack(self.embeddings)
-        self.embeddings = self.embeddings[:num_samples]
         time = datetime.now() - start
         print(f'config:{config}, length:{len(self.embeddings)}, duration:{time.seconds} seconds')
 
