@@ -109,6 +109,11 @@ class Embedding:
         articles = dataset.select(indices)
         cnt = 0
         length = 0
+        embeddings = []
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        model = AutoModel.from_pretrained(self.model_name).to(device)
+        model.eval()
 
         while length < num_samples:
             sentences = []
@@ -118,15 +123,9 @@ class Embedding:
                     sentences.append(para.strip())
             sentences = sorted(sentences, key=len)
 
-            self.embeddings = []
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = AutoModel.from_pretrained(self.model_name).to(self.device)
-            self.model.eval()
-
             for i in range(0, len(sentences), batch):
                 snt_batched = sentences[i:min(i+batch, len(sentences))]
-                inputs = self.tokenizer(
+                inputs = tokenizer(
                     snt_batched,
                     return_tensors='pt',
                     truncation=True,
@@ -141,12 +140,12 @@ class Embedding:
                 hidden = outputs.last_hidden_state
                 attention_mask = inputs['attention_mask'].bool()
                 keep = attention_mask & (~special_mask)
-                self.embeddings.append(hidden[keep].cpu().numpy())
+                embeddings.append(hidden[keep].cpu().numpy())
                 length += len(hidden[keep].cpu().numpy())
 
             cnt += 1
 
-        self.embeddings = np.vstack(self.embeddings[:num_samples])
+        embeddings = np.vstack(embeddings[:num_samples])
         time = datetime.now() - start
         print(f'embedding: {config} ({time.seconds} seconds)')
     
