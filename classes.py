@@ -28,24 +28,13 @@ model_dir = os.getenv('MODEL_DIR')
 
 class Embedding:
     def __init__(self, model_name:str=None):
-        self.model_name = model_name
-
-
-    def embed_fasttext(self, file_name:str, tokenizer_name:str):
-        fasttext.util.download_model(self.lang, if_exists='ignore')
-        self.model = fasttext.load_model(f'cc.{self.lang}.300.bin')
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
-        with open(f'{file_name}.txt') as f:
-            text = f.readlines()
-        tokenized = [w for snt in text for w in self.tokenizer.tokenize(snt)]
-        tokenized_sorted = sorted(set(tokenized))
-        self.embeddings = []
-
-        for t in tokenized_sorted:
-            vec = self.model.get_word_vector(t)
-            self.embeddings.append(vec)
-        
-        self.embeddings = np.vstack(self.embeddings)
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.model = AutoModel.from_pretrained(model_name).to(self.device)
+            self.model.eval()
+        except:
+            pass
 
 
     def embed_dynamic(self, file_name:str, batch:int):
@@ -58,10 +47,6 @@ class Embedding:
         text = sorted(text, key=len)
 
         self.embeddings = []
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = AutoModel.from_pretrained(self.model_name).to(self.device)
-        self.model.eval()
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
         for i in range(0, len(text), batch):
             text_batched = text[i:min(i+batch, len(text))]
@@ -87,16 +72,7 @@ class Embedding:
         print(f'embedding: {file_name} ({time.seconds} seconds)')
 
 
-
-    def embed_fasttext_model(self, id:str, num_samples:int=10000, seed:int=42):
-        self.model = fasttext.load_model(f'{model_dir}/cc.{id}.300.bin')
-        random.seed(seed)
-        input_matrix = self.model.get_input_matrix()
-        indices = random.sample(range(len(input_matrix)), k=num_samples)
-        self.embeddings = input_matrix[indices]
-
-
-    def embed_dynamic_wiki(self, config:str, batch:int, num_samples:int=5000, seed:int=42):
+    def embed_dynamic_wiki(self, config:str, batch:int, num_samples:int, seed:int):
         start = datetime.now()
         print(f'start embedding (wiki): {config}')
         dataset = load_dataset(
@@ -110,10 +86,6 @@ class Embedding:
         cnt = 0
         length = 0
         self.embeddings = []
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        model = AutoModel.from_pretrained(self.model_name).to(device)
-        model.eval()
 
         while length < num_samples:
             sentences = []
@@ -125,7 +97,7 @@ class Embedding:
 
             for i in range(0, len(sentences), batch):
                 snt_batched = sentences[i:min(i+batch, len(sentences))]
-                inputs = tokenizer(
+                inputs = self.tokenizer(
                     snt_batched,
                     return_tensors='pt',
                     truncation=True,
@@ -133,10 +105,10 @@ class Embedding:
                     max_length=512,
                     return_special_tokens_mask=True
                     )
-                inputs = {k: v.to(device) for k, v in inputs.items()}
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
                 special_mask = inputs.pop('special_tokens_mask').bool()
                 with torch.no_grad():
-                    outputs = model(**inputs)
+                    outputs = self.model(**inputs)
                 hidden = outputs.last_hidden_state
                 attention_mask = inputs['attention_mask'].bool()
                 keep = attention_mask & (~special_mask)
@@ -148,8 +120,16 @@ class Embedding:
         self.embeddings = np.vstack(self.embeddings)
         self.embeddings = self.embeddings[:num_samples]
         time = datetime.now() - start
-        print(f'config:{config}, length:{len(self.embeddings)} ({time.seconds} seconds)')
-    
+        print(f'config:{config}, length:{len(self.embeddings)}, duration:{time.seconds} seconds')
+
+
+    def embed_fasttext_model(self, id:str, num_samples:int=10000, seed:int=42):
+        self.model = fasttext.load_model(f'{model_dir}/cc.{id}.300.bin')
+        random.seed(seed)
+        input_matrix = self.model.get_input_matrix()
+        indices = random.sample(range(len(input_matrix)), k=num_samples)
+        self.embeddings = input_matrix[indices]
+
 
 
 class PersistenceDiagram:
