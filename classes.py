@@ -109,7 +109,7 @@ class Embedding:
         articles = dataset.select(indices)
         cnt = 0
         length = 0
-        embeddings = []
+        self.embeddings = []
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         model = AutoModel.from_pretrained(self.model_name).to(device)
@@ -140,12 +140,12 @@ class Embedding:
                 hidden = outputs.last_hidden_state
                 attention_mask = inputs['attention_mask'].bool()
                 keep = attention_mask & (~special_mask)
-                embeddings.append(hidden[keep].cpu().numpy())
+                self.embeddings.append(hidden[keep].cpu().numpy())
                 length += len(hidden[keep].cpu().numpy())
 
             cnt += 1
 
-        embeddings = np.vstack(embeddings[:num_samples])
+        self.embeddings = np.vstack(self.embeddings[:num_samples])
         time = datetime.now() - start
         print(f'embedding: {config} ({time.seconds} seconds)')
     
