@@ -145,9 +145,10 @@ class Embedding:
 
             cnt += 1
 
-        self.embeddings = np.vstack(self.embeddings[:num_samples])
+        self.embeddings = np.vstack(self.embeddings)
+        self.embeddings = self.embeddings[:num_samples]
         time = datetime.now() - start
-        print(f'embedding: {config} ({time.seconds} seconds)')
+        print(f'config:{config}, length:{len(self.embeddings)} ({time.seconds} seconds)')
     
 
 
