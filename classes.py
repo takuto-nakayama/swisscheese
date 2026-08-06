@@ -72,7 +72,7 @@ class Embedding:
         print(f'embedding: {file_name} ({time.seconds} seconds)')
 
 
-    def embed_dynamic_wiki(self, config:str, batch:int, num_samples:int, seed:int):
+    def embed_dynamic_wiki(self, config:str, batch:int, num_articles:int, seed:int):
         start = datetime.now()
         print(f'start embedding (wiki): {config}')
         dataset = load_dataset(
@@ -81,7 +81,7 @@ class Embedding:
             split='train'
             )
         random.seed(seed)
-        indices = sorted(random.sample(range(0,len(dataset)),k=num_samples))
+        indices = sorted(random.sample(range(0,len(dataset)),k=num_articles))
         articles = dataset.select(indices)
         self.embeddings = []
         sentences = []
@@ -125,10 +125,10 @@ class Embedding:
 
 
 class PersistenceDiagram:
-    def __init__(self, embeddings, seed:int, num_samples:int):
+    def __init__(self, embeddings, seed:int, num_points:int):
         if seed is not None:
             random.seed(seed)
-            indicess = sorted(random.sample(range(0,embeddings.shape[0]), k=num_samples))
+            indicess = sorted(random.sample(range(0,embeddings.shape[0]), k=num_points))
             embeddings = embeddings[indicess]
         mean_norm = np.linalg.norm(embeddings, axis=1).mean()
         self.scaled_embeddings = embeddings / mean_norm
