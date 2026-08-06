@@ -5,12 +5,13 @@ if __name__=='__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('dir_name')
 	parser.add_argument('save_name')
-	parser.add_argument('--p', type=int, default=2)
-	parser.add_argument('--eps', type=float, default=0.01)
+	parser.add_argument('--p', type=int, default=1)
+	parser.add_argument('--eps', type=float, default=0.05)
 	parser.add_argument('--z', type=float, default=1.96)
 	parser.add_argument('--n_directions', type=int, default=100)
 	parser.add_argument('--seed', type=int, default=42)
 	parser.add_argument('--max_directions', type=int, default=10000)
+	parser.add_argument('--percentile', type=int, default=50)
 
 	args = parser.parse_args()
 	dir_name = args.dir_name
@@ -21,6 +22,7 @@ if __name__=='__main__':
 	n_directions = args.n_directions
 	seed = args.seed
 	max_directions = args.max_directions
+	percentile = args.percentile
 
 	distance = Distance(
 		dir_name=dir_name,
@@ -32,7 +34,8 @@ if __name__=='__main__':
 		z=z,
 		n_directions=n_directions,
 		seed=seed,
-		max_directions=max_directions
+		max_directions=max_directions,
+		percentile=percentile
 		)
 	distance.clustering()
 	distance.msd_2d()

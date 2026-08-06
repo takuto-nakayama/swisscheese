@@ -212,7 +212,7 @@ class Distance:
         df_h1.to_csv(f'{ws_dir}/{self.dir_name}/{self.save_name}-h1.csv')
 
 
-    def get_sliced_wasserstein(self, p:int, eps:float, z:float, n_directions:int, seed:int, max_directions:int):
+    def get_sliced_wasserstein(self, p:int, eps:float, z:float, n_directions:int, seed:int, max_directions:int, percentile:int):
         start = datetime.now()
         results_h0 = np.empty((len(self.list_pds), len(self.list_pds), 4))
         results_h1 = np.empty((len(self.list_pds), len(self.list_pds), 4))
@@ -224,7 +224,7 @@ class Distance:
             k:
             [
                 v[0][np.isfinite(v[0]).all(axis=1)],
-                v[1][np.isfinite(v[1]).all(axis=1)]
+                _truncate_diagram_percentile(v[1][np.isfinite(v[1]).all(axis=1)], percentile=percentile)
             ]
             for k, v in dgms_all.items()
         }
@@ -367,3 +367,11 @@ def _estimate_directions(distances_pilot:np.ndarray, p:int, eps:float, z:float, 
     cv = sigma / mu
     directions = (z / (p * eps)) ** 2 * cv ** 2
     return int(min(np.ceil(directions), max_directions))
+
+
+def _truncate_diagram_percentile(dgm, percentile:int):
+    if len(dgm) == 0:
+        return dgm
+    persistence = dgm[:, 1] - dgm[:, 0]
+    threshold = np.percentile(persistence, percentile)
+    return dgm[persistence >= threshold]
