@@ -212,7 +212,7 @@ class Distance:
         df_h1.to_csv(f'{ws_dir}/{self.dir_name}/{self.save_name}-h1.csv')
 
 
-    def get_sliced_wasserstein(self, p:int=2, eps:float=0.01, z:float=1.96, n_directions:int=100, seed:int=42, max_L:int=10000):
+    def get_sliced_wasserstein(self, p:int, eps:float, z:float, n_directions:int, seed:int, max_directions:int):
         start = datetime.now()
         results_h0 = np.empty((len(self.list_pds), len(self.list_pds), 4))
         results_h1 = np.empty((len(self.list_pds), len(self.list_pds), 4))
@@ -234,24 +234,20 @@ class Distance:
             dgms_i = dgms_all[lang_i]
             h0_i = dgms_i[0]
             h1_i = dgms_i[1]
-            h0_i = h0_i[np.isfinite(h0_i).all(axis=1)]
-            h1_i = h1_i[np.isfinite(h1_i).all(axis=1)]
 
             for j in range(i + 1, len(self.list_pds)):
                 start_ij = datetime.now()
                 dgms_j = dgms_all[self.list_pds[j]]
                 h0_j = dgms_j[0]
                 h1_j = dgms_j[1]
-                h0_j = h0_j[np.isfinite(h0_j).all(axis=1)]
-                h1_j = h1_j[np.isfinite(h1_j).all(axis=1)]
                 
                 pilot_dist_h0, _, _ = _swd(X=h0_i, Y=h0_j, p=p, n_directions=n_directions, seed=seed)
-                numdir_h0 = estimate_L(pilot_dist_h0, p=p, eps=eps, z=z, max_L=max_L)
+                numdir_h0 = estimate_directions(pilot_dist_h0, p=p, eps=eps, z=z, max_directions=max_directions)
                 _, swd_h0, se_h0 = _swd(h0_i, h0_j, n_directions=numdir_h0, p=p,  seed=seed)
                 ci_low_h0, ci_high_h0 = swd_h0 - z * se_h0, swd_h0 + z * se_h0
 
                 pilot_dist_h1, _, _ = _swd(h1_i, h1_j, p=p, n_directions=n_directions, seed=seed)
-                numdir_h1 = estimate_L(pilot_dist_h1, p=p, eps=eps, z=z, max_L=max_L)
+                numdir_h1 = estimate_directions(pilot_dist_h1, p=p, eps=eps, z=z, max_directions=max_directions)
                 _, swd_h1, se_h1 = _swd(h1_i, h1_j, n_directions=numdir_h1, p=p, seed=seed)
                 ci_low_h1, ci_high_h1 = swd_h1 - z * se_h1, swd_h1 + z * se_h1
 
@@ -372,9 +368,9 @@ def _swd(
     return distances, round(swd, 4), round(se_swd, 4)
 
 
-def estimate_L(distances_pilot:np.ndarray, p:int, eps:float, z:float, max_L:int):
+def estimate_directions(distances_pilot:np.ndarray, p:int, eps:float, z:float, max_directions:int):
     mu = distances_pilot.mean()
     sigma = distances_pilot.std()
     cv = sigma / mu
-    L = (z / (p * eps)) ** 2 * cv ** 2
-    return int(min(np.ceil(L), max_L))
+    directions = (z / (p * eps)) ** 2 * cv ** 2
+    return int(min(np.ceil(directions), max_directions))
