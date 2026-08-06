@@ -230,24 +230,24 @@ class Distance:
         }
 
         for i, lang_i in enumerate(self.list_pds):
+            start_ij = datetime.now()
             print(f'{lang_i} started')
             dgms_i = dgms_all[lang_i]
             h0_i = dgms_i[0]
             h1_i = dgms_i[1]
 
             for j in range(i + 1, len(self.list_pds)):
-                start_ij = datetime.now()
                 dgms_j = dgms_all[self.list_pds[j]]
                 h0_j = dgms_j[0]
                 h1_j = dgms_j[1]
                 
                 pilot_dist_h0, _, _ = _swd(X=h0_i, Y=h0_j, p=p, n_directions=n_directions, seed=seed)
-                numdir_h0 = estimate_directions(pilot_dist_h0, p=p, eps=eps, z=z, max_directions=max_directions)
+                numdir_h0 = _estimate_directions(pilot_dist_h0, p=p, eps=eps, z=z, max_directions=max_directions)
                 _, swd_h0, se_h0 = _swd(h0_i, h0_j, n_directions=numdir_h0, p=p,  seed=seed)
                 ci_low_h0, ci_high_h0 = swd_h0 - z * se_h0, swd_h0 + z * se_h0
 
                 pilot_dist_h1, _, _ = _swd(h1_i, h1_j, p=p, n_directions=n_directions, seed=seed)
-                numdir_h1 = estimate_directions(pilot_dist_h1, p=p, eps=eps, z=z, max_directions=max_directions)
+                numdir_h1 = _estimate_directions(pilot_dist_h1, p=p, eps=eps, z=z, max_directions=max_directions)
                 _, swd_h1, se_h1 = _swd(h1_i, h1_j, n_directions=numdir_h1, p=p, seed=seed)
                 ci_low_h1, ci_high_h1 = swd_h1 - z * se_h1, swd_h1 + z * se_h1
 
@@ -256,8 +256,8 @@ class Distance:
                 results_h0[i,j] = results_h0[j,i] = [swd_h0, se_h0, ci_low_h0, ci_high_h0]
                 results_h1[i,j] = results_h1[j,i] = [swd_h1, se_h1, ci_low_h1, ci_high_h1]
 
-                time =  datetime.now() - start_ij
-                print(f'{self.list_pds[j]}: ({time.seconds} seconds)')
+            time =  datetime.now() - start_ij
+            print(f'{lang_i} is done. ({time.seconds} seconds)')
 
         df_h0 = pd.DataFrame(
             self.D_h0,
@@ -327,40 +327,33 @@ def _random_directions(n_directions:int, dim:int, seed:int | None=None) -> np.nd
     return directions
 
 
-def _wasserstein_1d(x:np.ndarray, y:np.ndarray, p:int) -> float:
-    x_sorted = np.sort(x)
-    y_sorted = np.sort(y)
-
-    n, m = len(x_sorted), len(y_sorted)
-    if n != m:
-        # サンプル数が違う場合は共通の分位点グリッドに補間して揃える
-        quantiles = np.linspace(0, 1, max(n, m))
-        x_sorted = np.quantile(x_sorted, quantiles)
-        y_sorted = np.quantile(y_sorted, quantiles)
-
-    diff = np.abs(x_sorted - y_sorted) ** p
-    return float(np.mean(diff) ** (1.0 / p))
-
-
 def _swd(
-    X:np.ndarray,
-    Y:np.ndarray,
-    n_directions:int,
-    p:int,
-    seed:int | None=None,
-) -> float:
-    assert X.shape[1] == Y.shape[1], 'X and Y must have the same number of dimensions.'
+        X,
+        Y,
+        n_directions,
+        p,
+        seed=None
+        ):
     dim = X.shape[1]
+    directions = _random_directions(n_directions, dim, seed=seed)  # (L, dim)
 
-    directions = _random_directions(n_directions, dim, seed=seed)
+    X_proj = X @ directions.T   # (n_x, L)  ← forループなしで全方向まとめて射影
+    Y_proj = Y @ directions.T   # (n_y, L)
 
-    # 各方向への射影は単なる内積 (n_samples, dim) @ (dim,) -> (n_samples,)
-    distances = np.empty(n_directions)
-    for i, theta in enumerate(directions):
-        x_proj = X @ theta
-        y_proj = Y @ theta
-        distances[i] = _wasserstein_1d(x_proj, y_proj, p=p) ** p
-    swd =  float(np.mean(distances) ** (1.0 / p))
+    X_sorted = np.sort(X_proj, axis=0)   # 列(方向)ごとに一括ソート
+    Y_sorted = np.sort(Y_proj, axis=0)
+
+    n, m = X_sorted.shape[0], Y_sorted.shape[0]
+    if n != m:
+        common = max(n, m)
+        t_common = np.linspace(0, 1, common)   # 1回だけ計算
+        t_x, t_y = np.linspace(0, 1, n), np.linspace(0, 1, m)
+        X_sorted = np.column_stack([np.interp(t_common, t_x, X_sorted[:, k]) for k in range(n_directions)])
+        Y_sorted = np.column_stack([np.interp(t_common, t_y, Y_sorted[:, k]) for k in range(n_directions)])
+
+    diff = np.abs(X_sorted - Y_sorted) ** p
+    distances = diff.mean(axis=0)              # 各方向のW_p^p、(L,)
+    swd = float(distances.mean() ** (1.0 / p))
     se_mean = np.std(distances) / np.sqrt(n_directions)
     grad = (1.0 / p) * np.mean(distances) ** (1.0 / p - 1.0)
     se_swd = abs(grad) * se_mean
@@ -368,7 +361,7 @@ def _swd(
     return distances, round(swd, 4), round(se_swd, 4)
 
 
-def estimate_directions(distances_pilot:np.ndarray, p:int, eps:float, z:float, max_directions:int):
+def _estimate_directions(distances_pilot:np.ndarray, p:int, eps:float, z:float, max_directions:int):
     mu = distances_pilot.mean()
     sigma = distances_pilot.std()
     cv = sigma / mu
