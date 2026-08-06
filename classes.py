@@ -115,7 +115,7 @@ class Embedding:
         print(f'config:{config}, length:{len(self.embeddings)}, duration:{time.seconds} seconds')
 
 
-    def embed_fasttext_model(self, id:str, num_samples:int=10000, seed:int=42):
+    def embed_fasttext_model(self, id:str, num_samples:int, seed:int):
         self.model = fasttext.load_model(f'{model_dir}/cc.{id}.300.bin')
         random.seed(seed)
         input_matrix = self.model.get_input_matrix()
@@ -125,7 +125,7 @@ class Embedding:
 
 
 class PersistenceDiagram:
-    def __init__(self, embeddings, seed:int=None, num_samples:int=5000):
+    def __init__(self, embeddings, seed:int, num_samples:int):
         if seed is not None:
             random.seed(seed)
             indicess = sorted(random.sample(range(0,embeddings.shape[0]), k=num_samples))
