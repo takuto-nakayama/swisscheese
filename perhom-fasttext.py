@@ -18,7 +18,7 @@ if __name__=='__main__':
 	embedding = Embedding()
 	embedding.embed_fasttext_model(
 		id=id,
-		num_samples=num_samples,
+		num_points=num_points,
 		seed=42
 		)
 
