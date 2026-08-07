@@ -28,4 +28,4 @@ if __name__=='__main__':
 			seed=seed,
 			num_points=num_points,
 			)
-		pedg.pers_homology(file_name=save_name)
+		pedg.pers_homology(file_name=f'{save_name}-{seed}')
