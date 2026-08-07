@@ -6,17 +6,26 @@ if __name__=='__main__':
 
 	parser.add_argument('id')
 	parser.add_argument('save_name')
-	parser.add_argument('--num_samples', type=int, default=5000)
-	parser.add_argument('--seed', type=int, default=42)
+	parser.add_argument('--num_points', type=int, default=5000)
+	parser.add_argument('--seed_range', type=int, default=10)
 
 	args = parser.parse_args()
 	id = args.id
 	save_name = args.save_name
-	num_samples = args.num_samples
-	seed = args.seed
+	num_points = args.num_points
+	seed_range = args.seed_range
 
 	embedding = Embedding()
-	embedding.embed_fasttext_model(id=id, num_samples=num_samples, seed=seed)
+	embedding.embed_fasttext_model(
+		id=id,
+		num_samples=num_samples,
+		seed=42
+		)
 
-	pedg = PersistenceDiagram(embeddings=embedding.embeddings)
-	pedg.pers_homology(file_path=save_name)
+	for seed in range(seed_range):
+		pedg = PersistenceDiagram(
+			embeddings=embedding.embeddings,
+			seed=seed,
+			num_points=num_points,
+			)
+		pedg.pers_homology(file_path=save_name)
