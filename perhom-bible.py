@@ -9,6 +9,7 @@ if __name__=='__main__':
 	parser.add_argument('save_name')
 	parser.add_argument('--batch', type=int, default=100)
 	parser.add_argument('--seed_range', type=int, default=10)
+	parser.add_argument('--num_points', type=int, default=5000)
 
 	args = parser.parse_args()
 	model_name = args.model_name
@@ -16,11 +17,16 @@ if __name__=='__main__':
 	save_name = args.save_name
 	batch = args.batch
 	seed_range = args.seed_range
+	num_points = args.num_points
 
 
 	embedding = Embedding(model_name=model_name)
 	embedding.embed_dynamic(file_name=text_name, batch=batch)
 
 	for seed in range(seed_range):
-		pedg = PersistenceDiagram(embeddings=embedding.embeddings, seed=seed)
+		pedg = PersistenceDiagram(
+			embeddings=embedding.embeddings,
+			seed=seed,
+			num_points=num_points
+			)
 		pedg.pers_homology(file_name=f'{save_name}-{seed}')
