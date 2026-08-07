@@ -115,11 +115,11 @@ class Embedding:
         print(f'config:{config}, length:{len(self.embeddings)}, duration:{time.seconds} seconds')
 
 
-    def embed_fasttext_model(self, id:str, num_points:int, seed:int):
+    def embed_fasttext_model(self, id:str, num_embeddings:int, seed:int):
         self.model = fasttext.load_model(f'{model_dir}/cc.{id}.300.bin')
         random.seed(seed)
         input_matrix = self.model.get_input_matrix()
-        indices = random.sample(range(len(input_matrix)), k=num_points)
+        indices = random.sample(range(len(input_matrix)), k=num_embeddings)
         self.embeddings = input_matrix[indices]
 
 
