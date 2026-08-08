@@ -241,10 +241,11 @@ class Distance:
                 h0_j = dgms_j[0]
                 h1_j = dgms_j[1]
                 
-                pilot_dist_h0, _, _ = _swd(X=h0_i, Y=h0_j, p=p, n_directions=n_directions, seed=seed)
-                numdir_h0 = _estimate_directions(pilot_dist_h0, p=p, eps=eps, z=z, max_directions=max_directions)
-                _, swd_h0, se_h0 = _swd(h0_i, h0_j, n_directions=numdir_h0, p=p,  seed=seed)
-                ci_low_h0, ci_high_h0 = swd_h0 - z * se_h0, swd_h0 + z * se_h0
+                # H0は原点から1方向にしか伸びない(birth=0固定の)対角線上の点群なので、
+                # 方向をランダムサンプリングせず、原点からの距離のソートのみで1次元Wasserstein距離を計算する
+                swd_h0 = _wasserstein_1d(h0_i, h0_j, p=p)
+                se_h0 = 0.0
+                ci_low_h0, ci_high_h0 = swd_h0, swd_h0
 
                 pilot_dist_h1, _, _ = _swd(h1_i, h1_j, p=p, n_directions=n_directions, seed=seed)
                 numdir_h1 = _estimate_directions(pilot_dist_h1, p=p, eps=eps, z=z, max_directions=max_directions)
@@ -363,6 +364,28 @@ def _swd(
     se_swd = abs(grad) * se_mean
 
     return distances, round(swd, 4), round(se_swd, 4)
+
+
+def _wasserstein_1d(X: np.ndarray, Y: np.ndarray, p: int) -> float:
+    # H0は原点から放射状の1方向にしか点が伸びないため、対角線への射影は不要。
+    # 原点からの距離だけをソートして1次元Wassersteinを計算する。
+    x_dist = np.linalg.norm(X, axis=1) if len(X) > 0 else np.zeros(0)
+    y_dist = np.linalg.norm(Y, axis=1) if len(Y) > 0 else np.zeros(0)
+    n, m = len(x_dist), len(y_dist)
+    if n == 0 and m == 0:
+        return 0.0
+
+    x_sorted = np.sort(x_dist)
+    y_sorted = np.sort(y_dist)
+
+    if n != m:
+        common = max(n, m)
+        t_common = np.linspace(0, 1, common)
+        x_sorted = np.interp(t_common, np.linspace(0, 1, n), x_sorted) if n > 0 else np.zeros(common)
+        y_sorted = np.interp(t_common, np.linspace(0, 1, m), y_sorted) if m > 0 else np.zeros(common)
+
+    diff = np.abs(x_sorted - y_sorted) ** p
+    return float(diff.mean() ** (1.0 / p))
 
 
 def _estimate_directions(distances_pilot:np.ndarray, p:int, eps:float, z:float, max_directions:int):
