@@ -327,6 +327,13 @@ def _random_directions(n_directions:int, dim:int, seed:int | None=None) -> np.nd
     return directions
 
 
+def _project_to_diagonal(points: np.ndarray) -> np.ndarray:
+    if len(points) == 0:
+        return points.reshape(0, 2)
+    proj = (points[:, 0] + points[:, 1]) / 2.0
+    return np.column_stack([proj, proj])
+
+
 def _swd(
         X,
         Y,
@@ -334,22 +341,19 @@ def _swd(
         p,
         seed=None
         ):
-    dim = X.shape[1]
+    dim = X.shape[1] if len(X) > 0 else Y.shape[1]
+
+    # 対角線への射影を追加し、両方の図の点数を揃える(Carriere et al. のSliced Wasserstein Kernel定義)
+    X_aug = np.vstack([X, _project_to_diagonal(Y)])
+    Y_aug = np.vstack([Y, _project_to_diagonal(X)])
+
     directions = _random_directions(n_directions, dim, seed=seed)  # (L, dim)
 
-    X_proj = X @ directions.T   # (n_x, L)  ← forループなしで全方向まとめて射影
-    Y_proj = Y @ directions.T   # (n_y, L)
+    X_proj = X_aug @ directions.T   # (n+m, L)  ← forループなしで全方向まとめて射影
+    Y_proj = Y_aug @ directions.T   # (n+m, L)
 
     X_sorted = np.sort(X_proj, axis=0)   # 列(方向)ごとに一括ソート
     Y_sorted = np.sort(Y_proj, axis=0)
-
-    n, m = X_sorted.shape[0], Y_sorted.shape[0]
-    if n != m:
-        common = max(n, m)
-        t_common = np.linspace(0, 1, common)   # 1回だけ計算
-        t_x, t_y = np.linspace(0, 1, n), np.linspace(0, 1, m)
-        X_sorted = np.column_stack([np.interp(t_common, t_x, X_sorted[:, k]) for k in range(n_directions)])
-        Y_sorted = np.column_stack([np.interp(t_common, t_y, Y_sorted[:, k]) for k in range(n_directions)])
 
     diff = np.abs(X_sorted - Y_sorted) ** p
     distances = diff.mean(axis=0)              # 各方向のW_p^p、(L,)
