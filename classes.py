@@ -392,7 +392,7 @@ def _estimate_directions(distances_pilot:np.ndarray, p:int, eps:float, z:float, 
     mu = distances_pilot.mean()
     sigma = distances_pilot.std()
     cv = sigma / mu
-    directions = (z / (p * eps)) ** 2 * max(cv, 1) ** 2
+    directions = (z / (p * eps)) ** 2 * max(1, cv) ** 2
     return int(min(np.ceil(directions), max_directions))
 
 
